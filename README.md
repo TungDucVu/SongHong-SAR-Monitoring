@@ -10,71 +10,78 @@
 
 ## 📋 Giới thiệu
 
-Dự án xây dựng quy trình **bán tự động** giám sát biến động mặt nước, đường bờ và bãi bồi Sông Hồng đoạn qua Hà Nội, sử dụng ảnh vệ tinh SAR Sentinel-1 từ năm 2015 đến 2024.
+Dự án này xây dựng quy trình **bán tự động** giám sát biến động mặt nước, đường bờ và các bãi bồi Sông Hồng đoạn qua Hà Nội (từ Sơn Tây đến Phú Xuyên, độ dài ~80km), sử dụng chuỗi ảnh vệ tinh radar Sentinel-1 SAR trong giai đoạn 10 năm (2015–2024).
 
-**Người thực hiện:** Vũ Đức Tùng | **Tháng:** 07/2026
+Dự án được thiết kế theo cấu trúc **mô-đun hóa (modular structure)** chuyên nghiệp, phân tách rõ ràng cấu hình, thuật toán xử lý ảnh, truy vấn dữ liệu và các hàm tiện ích, kết hợp với giao diện trực quan hóa Jupyter Notebook.
 
-## 🎯 Mục tiêu
+---
 
-- Xây dựng quy trình tự động phân loại **Mặt nước / Bãi bồi / Đất** từ SAR
-- Phát triển mô hình **Random Forest** trên Google Earth Engine
-- Phân tích biến động **10 năm** (2015–2024) tại các điểm trọng điểm: Long Biên, Nhật Tân, Vĩnh Tuy
-- Tương quan kết quả với dữ liệu **thủy văn**
-
-## 📁 Cấu trúc dự án
+## 📁 Cấu trúc thư mục dự án
 
 ```
 SongHong-SAR-Monitoring/
 ├── aoi/
-│   ├── song_hong_aoi.geojson     # Vùng nghiên cứu (AOI)
-│   └── README.md                 # Hướng dẫn upload AOI
+│   ├── song_hong_aoi.geojson     # Vùng nghiên cứu (AOI) dạng GeoJSON
+│   └── README.md                 # Tài liệu hướng dẫn AOI
+├── src/                          # Thư mục mã nguồn chính (Python Package)
+│   ├── __init__.py
+│   ├── config.py                 # Cấu hình dự án (Project ID, orbits, thresholds, paths)
+│   ├── aoi.py                    # Tiện ích liên quan AOI và tự động upload GEE Asset
+│   ├── preprocessing.py          # Bộ lọc Speckle (Refined Lee) & Tính đặc trưng (VV, VH, Ratio)
+│   ├── collection.py             # Truy vấn, thống kê, tạo monthly/annual composites
+│   └── utils.py                  # Xuất báo cáo CSV/JSON, export GeoTIFF, lưu map HTML
 ├── docs/
-│   └── week1_notes.md            # Ghi chú kỹ thuật
-├── outputs/                      # Thư mục chứa kết quả (không commit)
-├── week1_pipeline.ipynb          # Notebook quy trình Tuần 1 (Kiểm tra, thu thập, tiền xử lý, export)
+│   └── week1_notes.md            # Ghi chú kỹ thuật chi tiết Tuần 1
+├── outputs/                      # Thư mục chứa kết quả cục bộ (được bỏ qua bởi git)
+├── week1_pipeline.ipynb          # Jupyter Notebook tích hợp chạy toàn bộ quy trình Tuần 1
+├── .gitignore                    # Quản lý các file không commit
 └── Đề cương công việc thực tập.md # Đề cương thực tập chi tiết
 ```
+
+---
 
 ## ⚡ Bắt đầu nhanh
 
 ### 1. Cài đặt thư viện
-
+Cài đặt các thư viện cần thiết bằng pip:
 ```bash
-pip install earthengine-api geemap jupyter
+pip install earthengine-api geemap jupyter numpy
+```
+
+### 2. Xác thực Google Earth Engine
+```bash
 earthengine authenticate
 ```
 
-### 2. Chạy quy trình
+### 3. Chạy quy trình
+Khởi chạy Jupyter Notebook hoặc mở file trong VS Code:
+```bash
+jupyter notebook week1_pipeline.ipynb
+```
+Chạy lần lượt các cell để thực thi:
+1. **Thiết lập & Nạp AOI:** Kết nối GEE project `crested-library-500309-i2` và tự động đồng bộ AOI GeoJSON lên Assets.
+2. **Kiểm tra Metadata S1:** In metadata và kiểm tra độ phân giải của ảnh mẫu.
+3. **Phân tích độ phủ:** Thống kê số lượng ảnh theo năm/tháng (thu được 317 ảnh) và xuất báo cáo CSV.
+4. **Tiền xử lý & Kiểm chứng tự động:** Lọc speckle noise (Refined Lee) và tính đặc trưng. Kiểm chứng trị số backscatter tại điểm nước/đất.
+5. **Trực quan hóa:** Hiển thị và lưu bản đồ HTML so sánh mùa khô/lũ.
+6. **Export GeoTIFF:** Gửi các task xuất ảnh composite độ phân giải 10m lên Google Drive.
 
-Mở Jupyter Notebook hoặc VS Code để chạy file:
-`week1_pipeline.ipynb`
+---
 
-Notebook này chứa đầy đủ 5 phần:
-1. **Kiểm tra môi trường GEE** (khởi tạo project, hiển thị bản đồ trực quan).
-2. **Thu thập thống kê dữ liệu Sentinel-1** (2015-2024), lưu thống kê ra CSV và JSON.
-3. **Tiền xử lý & Tính toán đặc trưng** (Lọc speckle Refined Lee Filter, tạo Monthly Composite, tính band VV/VH ratio).
-4. **Kiểm tra trực quan** (so sánh mùa mưa vs mùa khô, đối chiếu Sentinel-2 RGB).
-5. **Export dữ liệu mẫu** (xuất ảnh GeoTIFF 10m lên Google Drive).
+## 🛰️ Dữ liệu & Kết quả kiểm chứng (Tuần 1)
 
-## 🛰️ Dữ liệu
+- **Tổng số lượng ảnh S1:** 317 ảnh (Không có gap dữ liệu hàng năm).
+- **Trị số VV Kiểm chứng (Tháng 1/2024):**
+  - Mặt nước: **-18.70 dB** (Ngưỡng lý thuyết: < -15 dB) -> **ĐẠT** ✅
+  - Đất liền: **-1.54 dB** (Ngưỡng lý thuyết: > -10 dB) -> **ĐẠT** ✅
 
-| Nguồn | Dataset | Giai đoạn |
-|---|---|---|
-| Sentinel-1 | `COPERNICUS/S1_GRD` | 2015–2024 |
-| Sentinel-2 | `COPERNICUS/S2_SR_HARMONIZED` | Đối chiếu |
-| GEE Project | `crested-library-500309-i2` | — |
+---
 
-## 📊 Kết quả mong đợi
+## 📅 Tiến độ tổng thể
 
-- Chuỗi bản đồ phân loại (Mặt nước / Bãi bồi / Đất) hàng tháng 2015–2024
-- Biểu đồ biến động diện tích theo thời gian
-- Độ chính xác phân loại > 85% (OA)
-
-## 📅 Tiến độ
-
-| Tuần | Hạng mục | Deadline | Trạng thái |
+| Tuần | Hạng mục công việc | Deadline | Trạng thái |
 |---|---|---|---|
-| Tuần 1 | Chuẩn bị dữ liệu & GEE | 07/07/2026 | 🔄 Đang thực hiện |
-| Tuần 2 | Mô hình Random Forest | 14/07/2026 | ⏳ |
-| Tuần 3 | Tự động hóa chuỗi thời gian | 21/07/2026 | ⏳ |
-| Tuần 4 | Phân tích & Báo cáo | 31/07/2026 | ⏳ |
+| **Tuần 1** | **Chuẩn bị dữ liệu & Thiết lập môi trường** | Ngày thứ 7 | ✅ Hoàn thành |
+| **Tuần 2** | **Xây dựng mô hình Machine Learning (Random Forest)** | Ngày thứ 14 | ⏳ Chờ thực hiện |
+| **Tuần 3** | **Tự động hóa chuỗi thời gian & Đánh giá độ chính xác** | Ngày thứ 21 | ⏳ Chờ thực hiện |
+| **Tuần 4** | **Phân tích hình thái, đối chiếu thủy văn & Báo cáo** | Ngày cuối tháng | ⏳ Chờ thực hiện |

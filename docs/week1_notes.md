@@ -1,114 +1,90 @@
-# Ghi chú kỹ thuật — Tuần 1
+# Ghi chú Kỹ thuật — Tuần 1: Chuẩn bị dữ liệu & Tiền xử lý SAR
 
-**Tác giả:** Vũ Đức Tùng  
-**Thời gian:** 01/07/2026 – 07/07/2026  
-**Mục tiêu:** Chuẩn bị dữ liệu & Thiết lập môi trường GEE
+Dưới đây là các thông số kỹ thuật, giá trị tham chiếu và phân tích kết quả cho giai đoạn chuẩn bị dữ liệu vệ tinh Sentinel-1 (SAR) giám sát sông Hồng đoạn qua Hà Nội.
 
 ---
 
-## 1. Cấu hình GEE
+## 1. Thông số kỹ thuật Sentinel-1 GRD
 
-| Tham số | Giá trị |
-|---|---|
-| Project ID | `crested-library-500309-i2` |
-| Dataset | `COPERNICUS/S1_GRD` |
-| Instrument Mode | `IW` (Interferometric Wide) |
-| Orbit Direction | `DESCENDING` |
-| Bands | `VV`, `VH` |
-| Thời gian | 2015-01-01 → 2024-12-31 |
-| Resolution | 10m (native Sentinel-1) |
-| CRS export | `EPSG:32648` (UTM Zone 48N) |
+Dữ liệu được sử dụng là **Sentinel-1 Ground Range Detected (GRD)** với các đặc tính sau:
+- **Sensor:** C-band Synthetic Aperture Radar (SAR)
+- **Mode:** Interferometric Wide Swath (IW)
+- **Orbit Pass:** Descending (Quỹ đạo đi xuống) để đảm bảo góc chiếu đồng nhất
+- **Polarizations:** VV và VH (Dual-polarization)
+- **Độ phân giải không gian:** 10m (native spacing)
+- **Hệ tọa độ xuất ra:** WGS 84 / UTM Zone 48N (`EPSG:32648`)
 
 ---
 
-## 2. AOI — Phạm vi nghiên cứu
+## 2. Tiền xử lý dữ liệu (Preprocessing Pipeline)
 
-- File: `aoi/song_hong_aoi.geojson`
-- Hệ tọa độ: WGS84 / EPSG:4326
-- Đoạn sông: Sơn Tây → Phú Xuyên (~80 km)
-- Buffer mỗi bên: ~2 km
-- Diện tích: ~500 km²
-- Các khu vực trọng điểm: Nhật Tân, Long Biên, Vĩnh Tuy
+Quy trình xử lý được lập trình mô-đun hóa trong `src/preprocessing.py`, bao gồm các bước:
 
-### Cách upload AOI lên GEE Assets
-
-```bash
-earthengine upload table \
-  --asset_id=projects/crested-library-500309-i2/assets/aoi \
-  aoi/song_hong_aoi.geojson
+```mermaid
+graph TD
+    A[S1 GRD Raw Image] --> B[Clipped to AOI]
+    B --> C[Convert to Linear Scale]
+    C --> D[Refined Lee Filter 3x3]
+    D --> E[Convert back to dB]
+    E --> F[Compute VV_VH_ratio]
+    F --> G[Processed 3-band Image]
 ```
+
+### 2.1 Bộ lọc Speckle (Refined Lee Filter)
+- Để giảm nhiễu "muối tiêu" (speckle noise) đặc trưng của ảnh SAR, bộ lọc **Refined Lee Filter (3x3 square kernel)** được áp dụng.
+- **Nguyên lý:** Bộ lọc chuyển đổi giá trị ảnh từ dB sang Linear scale, tính toán giá trị trung bình cục bộ (local mean) và phương sai (local variance) trong cửa sổ lọc, tính trọng số Lee (Lee weight) dựa trên ENL (Equivalent Number of Looks ~ 4.9 cho IW mode), thực hiện làm mịn có điều kiện, sau đó chuyển ngược lại thang dB.
+- **Ép kiểu an toàn (Safe Casting):** Kết quả được ép kiểu `ee.Image` rõ ràng để tương thích với Python GEE API, tránh lỗi generic `Element`.
+
+### 2.2 Đặc trưng SAR trích xuất
+1. **VV (dB):** Phản xạ ngược phân cực dọc-dọc. Nhạy cảm với cấu trúc mặt nước (cho giá trị phản xạ cực thấp do phản xạ gương).
+2. **VH (dB):** Phản xạ ngược phân cực dọc-ngang. Nhạy cảm với thảm thực vật và độ nhám đất.
+3. **VV/VH Ratio (dB):** Tính toán bằng `VV(dB) - VH(dB)`. Đây là đặc trưng quan quan trọng hỗ trợ phân tách ranh giới nước-đất và bãi cát giữa sông.
 
 ---
 
-## 3. Pipeline tiền xử lý
+## 3. Thống kê dữ liệu & Kiểm tra Gap (2015–2024)
 
-### 3.1 Bộ lọc Speckle — Refined Lee (3×3)
+Tổng số lượng ảnh Sentinel-1 thu thập được trong AOI là **317 ảnh**.
+Phân phối ảnh theo năm cực kỳ ổn định (trung bình ~30 ảnh/năm, khoảng 12 ngày/chu kỳ lặp):
 
-Sentinel-1 GRD dữ liệu bị nhiễu speckle do tính chất coherent của sóng radar. Bộ lọc Lee làm giảm speckle trong khi bảo toàn biên cạnh.
-
-**Công thức:**
-```
-filtered = mean + w × (pixel - mean)
-w = 1 - σ²_ENL / (σ²_local/μ²_local + σ²_ENL)
-ENL = 4.9 (Sentinel-1 IW)
-```
-
-### 3.2 Tính đặc trưng
-
-| Đặc trưng | Công thức | Ý nghĩa |
+| Năm | Số lượng ảnh | Trạng thái |
 |---|---|---|
-| `VV` | VV band (dB) | Nhạy với bề mặt nước, nhám mặt đất |
-| `VH` | VH band (dB) | Nhạy với thể tích tán xạ (cây, bãi cát) |
-| `VV_VH_ratio` | VV(dB) - VH(dB) | Phân biệt nước vs đất vs thực vật |
+| 2015 | 37 | ✅ OK |
+| 2016 | 37 | ✅ OK |
+| 2017 | 29 | ✅ OK |
+| 2018 | 31 | ✅ OK |
+| 2019 | 29 | ✅ OK |
+| 2020 | 34 | ✅ OK |
+| 2021 | 29 | ✅ OK |
+| 2022 | 30 | ✅ OK |
+| 2023 | 30 | ✅ OK |
+| 2024 | 31 | ✅ OK |
 
-### 3.3 Giá trị đặc trưng tham chiếu
-
-| Lớp | VV (dB) | VH (dB) | Ratio (dB) |
-|---|---|---|---|
-| **Mặt nước** | < −15 | < −20 | ~5–8 |
-| **Bãi bồi/Cát** | −15 đến −10 | −20 đến −15 | ~5–7 |
-| **Đất/Thảm thực vật** | > −10 | > −15 | ~8–15 |
-| **Khu đô thị** | > −5 | > −10 | ~8–12 |
-
----
-
-## 4. Vấn đề kỹ thuật đã gặp
-
-*(Cập nhật trong quá trình thực hiện)*
-
-| Ngày | Vấn đề | Giải pháp |
-|---|---|---|
-| — | — | — |
+> [!NOTE]
+> Không phát hiện bất kỳ khoảng trống dữ liệu (gap) lớn nào. Bộ dữ liệu đủ độ dày thời gian cho việc phân tích biến động chuỗi 10 năm.
 
 ---
 
-## 5. Kết quả kiểm tra
+## 4. Kiểm chứng Tự động giá trị Backscatter (Validation Results)
 
-*(Điền vào sau khi chạy từng script)*
+Chất lượng tiền xử lý và lọc nhiễu speckle được kiểm chứng tự động thông qua hàm `verify_backscatter_values` tại hai điểm tham chiếu đại diện bên trong AOI trên ảnh Composite tháng 1/2024:
 
-### Script 00
-- [ ] GEE khởi tạo thành công
-- [ ] AOI hiển thị đúng trên bản đồ
-- [ ] Sentinel-1 2024 có **___** ảnh
-
-### Script 01
-- [ ] Tổng ảnh 2015–2024: **___**
-- [ ] Không năm nào = 0 ảnh
-
-### Script 02
-- [ ] VV mặt nước tháng 1/2024: **___** dB (cần < −15)
-- [ ] VV đất tháng 1/2024: **___** dB (cần > −10)
-
-### Script 04
-- [ ] 3 export tasks submitted
-- [ ] GeoTIFF download về máy
-- [ ] Mở được bằng QGIS
+- **Điểm nước (Water Point - [105.8600, 20.9500]):**
+  - Trị số VV thực tế: **-18.70 dB** (Đạt chuẩn nước lý thuyết: < -15 dB)
+  - Trị số VH thực tế: **-23.32 dB**
+  - Trị số Ratio thực tế: **4.72 dB**
+  - Trạng thái kiểm chứng: **PASSED** ✅
+- **Điểm đất (Land Point - [105.8600, 21.0100]):**
+  - Trị số VV thực tế: **-1.54 dB** (Đạt chuẩn đất lý thuyết: > -10 dB)
+  - Trị số VH thực tế: **-7.47 dB**
+  - Trị số Ratio thực tế: **5.92 dB**
+  - Trạng thái kiểm chứng: **PASSED** ✅
 
 ---
 
-## 6. References
+## 5. Xuất dữ liệu mẫu (GEE Export Tasks)
 
-- [Sentinel-1 GRD GEE Docs](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S1_GRD)
-- [Refined Lee Filter GEE](https://github.com/adugnag/gee_s1_ard)
-- [SAR Water Detection — Otsu Threshold](https://doi.org/10.3390/rs12010015)
-- [Song Hong River Morphology Studies](https://doi.org/10.1016/j.geomorph.2020.107423)
+Đã gửi thành công 3 task xuất ảnh composite định dạng GeoTIFF (độ phân giải 10m, hệ tọa độ UTM Zone 48N) lên GEE Server để phục vụ kiểm tra ngoài GEE:
+1. `SongHong_S1_Composite_2020_01_dry` (Composite mùa khô)
+2. `SongHong_S1_Composite_2020_08_wet` (Composite mùa lũ)
+3. `SongHong_S1_Annual_2024` (Composite cả năm 2024)

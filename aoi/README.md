@@ -16,19 +16,6 @@
 - **Long Biên** (~21.04°N, 105.87°E) — Cầu Long Biên, biến động đường bờ rõ nét
 - **Vĩnh Tuy** (~20.99°N, 105.89°E) — Cầu Vĩnh Tuy, bãi cát giữa sông
 
-## Upload lên GEE Assets
+## Tự động upload lên GEE Assets
 
-```bash
-# Dùng Earth Engine CLI
-earthengine upload table \
-  --asset_id=projects/crested-library-500309-i2/assets/aoi \
-  aoi/song_hong_aoi.geojson
-```
-
-Hoặc vào [code.earthengine.google.com](https://code.earthengine.google.com) → **Assets** → **New** → **Shape files** → upload file này.
-
-## Ghi chú
-
-- Polygon được vẽ thủ công dựa trên hình thái sông từ Google Maps.
-- Cần kiểm tra lại bằng `scripts/00_environment_check.py` để đảm bảo AOI phủ đủ ảnh Sentinel-1.
-- Nếu cần mở rộng (ví dụ thêm đoạn Hưng Yên), chỉnh sửa trực tiếp tại [geojson.io](https://geojson.io).
+Mô-đun `src/aoi.py` tích hợp sẵn phương thức tải GeoJSON này lên GEE Asset của dự án thông qua Python API. Khi chạy notebook `week1_pipeline.ipynb`, AOI sẽ tự động được kiểm tra và upload nếu chưa tồn tại.
