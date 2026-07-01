@@ -1,6 +1,6 @@
 """
 Utility and validation module for SongHong SAR Monitoring.
-Handles HTML map output, Google Drive GeoTIFF exports, CSV/JSON reporting, and backscatter validations.
+Handles HTML map output, CSV/JSON reporting, and backscatter validations.
 """
 
 import os
@@ -52,34 +52,7 @@ def save_stats_to_json(data, filename):
     print(f"[Stats] Saved JSON report to: {out_path}")
     return out_path
 
-def export_image_to_drive(image, description, folder, aoi_geometry):
-    """
-    Submits a GEE Export task to save a processed S1 image as GeoTIFF to Google Drive.
-    
-    Args:
-        image: ee.Image containing bands to export.
-        description: str task description and file prefix.
-        folder: str target Drive folder name.
-        aoi_geometry: ee.Geometry for regional clip.
-        
-    Returns:
-        str Task ID.
-    """
-    task = ee.batch.Export.image.toDrive(
-        image=image,
-        description=description,
-        folder=folder,
-        fileNamePrefix=description,
-        region=aoi_geometry,
-        scale=EXPORT_SCALE,
-        crs=EXPORT_CRS,
-        maxPixels=1e10,
-        fileFormat='GeoTIFF'
-    )
-    task.start()
-    print(f"[Export] Submitted GEE export task: {description}")
-    print(f"         Task ID: {task.id}")
-    return task.id
+
 
 def verify_backscatter_values(composite, water_pt_coords, land_pt_coords):
     """
