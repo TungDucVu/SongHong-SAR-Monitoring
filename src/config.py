@@ -30,8 +30,8 @@ EXPORT_CRS = 'EPSG:32648'  # UTM Zone 48N (suitable for Hanoi)
 EXPORT_SCALE = 10          # 10m native spatial resolution of Sentinel-1
 
 # Reference validation coordinates (Long Bien river and land check points)
-WATER_REF_POINT = [105.8600, 20.9500]
-LAND_REF_POINT = [105.8600, 21.0100]
+WATER_REF_POINT = [105.8600, 21.0400]
+LAND_REF_POINT = [105.8600, 21.0200]
 
 # Reference backscatter dB thresholds for verification
 EXPECTED_WATER_VV_MAX = -15.0
