@@ -1,32 +1,24 @@
 import sys, os
 sys.path.insert(0, os.getcwd())
-import ee
 import json
 import requests
 import folium
 import matplotlib.pyplot as plt
-from shapely.geometry import shape, mapping, LineString, MultiLineString
-from shapely.ops import unary_union
+from shapely.geometry import shape, mapping, LineString, MultiLineString, Polygon
+from shapely.ops import unary_union, linemerge, polygonize
 
-# Initialize GEE
-print("1. Initializing GEE and fetching Hanoi administrative boundary...")
+# Initialize GEE for verification only (not boundary)
+import ee
+print("1. Initializing GEE for verification...")
 ee.Initialize(project='crested-library-500309-i2')
 
-# Fetch Hanoi boundary from GEE (FAO GAUL Level 1)
-gaul1 = ee.FeatureCollection("FAO/GAUL/2015/level1")
-hanoi_fc = gaul1.filter(ee.Filter.inList('ADM1_NAME', ['Ha Noi City', 'Ha Tay']))
-hanoi_geojson = hanoi_fc.geometry().getInfo()
-hanoi_shape = shape(hanoi_geojson)
-
-print("2. Querying OpenStreetMap (Song Hong) via Overpass API...")
-# Bounding box around Hanoi: (min_lat, min_lon, max_lat, max_lon)
+print("2. Fetching Hanoi administrative boundary from OpenStreetMap...")
 overpass_url = "https://lz4.overpass-api.de/api/interpreter"
-overpass_query = """
+
+# Query to get Hanoi relation (id 1903516)
+hanoi_query = """
 [out:json][timeout:90];
-(
-  relation["name"="Sông Hồng"]["waterway"="river"](20.5,105.2,21.3,106.1);
-  way["name"="Sông Hồng"]["waterway"="river"](20.5,105.2,21.3,106.1);
-);
+relation(1903516);
 out geom;
 """
 
@@ -38,22 +30,64 @@ headers = {
 }
 
 try:
-    response = requests.post(overpass_url, data={'data': overpass_query}, headers=headers, timeout=30)
+    response = requests.post(overpass_url, data={'data': hanoi_query}, headers=headers, timeout=30)
     if response.status_code != 200:
-        # Try fallback endpoint
-        print("LZ4 failed, trying backup endpoint...")
-        response = requests.post("https://overpass.osm.ch/api/interpreter", data={'data': overpass_query}, headers=headers, timeout=30)
+        # Try fallback
+        print("LZ4 failed, trying backup endpoint for Hanoi boundary...")
+        response = requests.post("https://overpass.osm.ch/api/interpreter", data={'data': hanoi_query}, headers=headers, timeout=30)
     data = response.json()
 except Exception as e:
-    print(f"Failed to query OSM via Overpass: {e}")
+    print(f"Failed to query OSM for Hanoi boundary: {e}")
     sys.exit(1)
 
 elements = data.get('elements', [])
-print(f"Found {len(elements)} elements from OSM.")
+if not elements:
+    print("Error: Hanoi relation not found!")
+    sys.exit(1)
 
-# Convert to Shapely lines
+rel = elements[0]
+members = rel.get('members', [])
+boundary_lines = []
+for member in members:
+    role = member.get('role', '')
+    if role != 'inner' and 'geometry' in member:
+        coords = [[pt['lon'], pt['lat']] for pt in member['geometry']]
+        if len(coords) >= 2:
+            boundary_lines.append(LineString(coords))
+
+polygons = list(polygonize(boundary_lines))
+if not polygons:
+    print("Error: Could not construct Hanoi boundary polygon!")
+    sys.exit(1)
+
+hanoi_shape = unary_union(polygons)
+print(f"Loaded Hanoi Boundary. Area: {hanoi_shape.area * 111 * 103:.2f} sq km")
+
+print("3. Querying OSM Red River (Song Hong) centerline...")
+overpass_query_river = """
+[out:json][timeout:90];
+(
+  relation["name"="Sông Hồng"]["waterway"="river"](20.5,105.2,21.3,106.1);
+  way["name"="Sông Hồng"]["waterway"="river"](20.5,105.2,21.3,106.1);
+);
+out geom;
+"""
+
+try:
+    response = requests.post(overpass_url, data={'data': overpass_query_river}, headers=headers, timeout=30)
+    if response.status_code != 200:
+        print("LZ4 failed, trying backup endpoint for river...")
+        response = requests.post("https://overpass.osm.ch/api/interpreter", data={'data': overpass_query_river}, headers=headers, timeout=30)
+    data = response.json()
+except Exception as e:
+    print(f"Failed to query OSM for river: {e}")
+    sys.exit(1)
+
+elements_river = data.get('elements', [])
+print(f"Found {len(elements_river)} elements from OSM.")
+
 osm_lines = []
-for elem in elements:
+for elem in elements_river:
     elem_type = elem['type']
     if elem_type == 'way':
         coords = [[pt['lon'], pt['lat']] for pt in elem['geometry']]
@@ -71,21 +105,19 @@ if not osm_lines:
 
 osm_river_geom = unary_union(osm_lines)
 
-print("3. Clipping OSM Red River geometry by Hanoi boundary...")
+print("4. Clipping OSM Red River geometry by Hanoi boundary...")
 clipped_river = osm_river_geom.intersection(hanoi_shape)
 
-print("4. Creating visual check plot (Hanoi boundary vs OSM River)...")
+print("5. Creating visual check plot...")
 fig, ax = plt.subplots(figsize=(10, 8))
-# Plot Hanoi boundary
 if hanoi_shape.geom_type == 'Polygon':
     x, y = hanoi_shape.exterior.xy
-    ax.plot(x, y, color='gray', linestyle='--', label='Hanoi Boundary')
+    ax.plot(x, y, color='red', linewidth=1.5, label='Hanoi Boundary')
 elif hanoi_shape.geom_type == 'MultiPolygon':
     for poly in hanoi_shape.geoms:
         x, y = poly.exterior.xy
-        ax.plot(x, y, color='gray', linestyle='--', label='Hanoi Boundary' if poly == list(hanoi_shape.geoms)[0] else "")
+        ax.plot(x, y, color='red', linewidth=1.5, label='Hanoi Boundary' if poly == list(hanoi_shape.geoms)[0] else "")
 
-# Plot clipped river
 if clipped_river.geom_type == 'LineString':
     x, y = clipped_river.xy
     ax.plot(x, y, color='blue', linewidth=2, label='Clipped Red River (OSM)')
@@ -99,16 +131,18 @@ ax.legend()
 plot_path = r"d:\Future Career\SongHong-SAR-Monitoring\outputs\osm_river_check.png"
 plt.savefig(plot_path, dpi=150)
 plt.close()
-print(f"Saved visual check plot to: {plot_path}")
 
-print("5. Buffering clipped river by 2 km...")
-# 2km in degrees is approx 0.018
-buffer_dist = 0.018
+print("6. Buffering clipped river by 3 km...")
+# 3km in degrees is approx 0.027
+buffer_dist = 0.027
 final_aoi_geom = clipped_river.buffer(buffer_dist, cap_style=1, join_style=1)
+
+# Keep only parts inside Hanoi
+final_aoi_geom = final_aoi_geom.intersection(hanoi_shape)
 
 # Check Area
 poly_area_km2 = final_aoi_geom.area * 111 * 103
-print(f"Final OSM-based AOI Area (within Hanoi, 2.0km buffer): {poly_area_km2:.2f} sq km")
+print(f"Final OSM-based AOI Area (within Hanoi, 3.0km buffer): {poly_area_km2:.2f} sq km")
 
 # Construct GeoJSON
 geojson_output = {
@@ -124,10 +158,10 @@ geojson_output = {
     {
       "type": "Feature",
       "properties": {
-        "name": "Song Hong AOI - Hanoi Section (OSM Centerline + 2km Buffer)",
-        "description": "Hành lang Sông Hồng qua Hà Nội, lấy buffer 2km từ centerline của OpenStreetMap, giới hạn trong ranh giới Hà Nội",
+        "name": "Song Hong AOI - Hanoi Section (OSM Centerline + 3km Buffer)",
+        "description": "Hành lang Sông Hồng qua Hà Nội, lấy buffer 3km từ centerline của OpenStreetMap, giới hạn trong ranh giới Hà Nội",
         "crs": "WGS84 / EPSG:4326",
-        "method": "Hanoi GAUL boundary + OSM_Red_River_Centerline.buffer(2km) -> Clip by Hanoi",
+        "method": "OSM Hanoi boundary + OSM_Red_River_Centerline.buffer(3km) -> Clip by Hanoi",
         "created": "2026-07-01",
         "author": "Vu Duc Tung"
       },
@@ -147,7 +181,7 @@ with open(backup_out_path, "w", encoding="utf-8") as f:
 
 print(f"Saved final AOI GeoJSON to: {main_out_path}")
 
-print("6. Creating interactive HTML map for visual verification...")
+print("7. Creating interactive HTML map for visual verification...")
 m = folium.Map(location=[21.04, 105.86], zoom_start=10, tiles='openstreetmap')
 
 # Add Google Satellite base map
@@ -159,25 +193,25 @@ folium.TileLayer(
     control=True
 ).add_to(m)
 
-# Add Hanoi boundary
+# Add Hanoi boundary - Styled with bold red color to stand out clearly!
 folium.GeoJson(
-    hanoi_geojson,
+    mapping(hanoi_shape),
     name="Hanoi Boundary",
-    style_function=lambda x: {'fillColor': 'none', 'color': 'gray', 'weight': 2, 'dashArray': '5, 5'}
+    style_function=lambda x: {'fillColor': 'none', 'color': '#ff3300', 'weight': 3.5, 'opacity': 0.9}
 ).add_to(m)
 
 # Add OSM river centerline
 folium.GeoJson(
     mapping(clipped_river),
     name="OSM Red River Centerline",
-    style_function=lambda x: {'color': 'red', 'weight': 3}
+    style_function=lambda x: {'color': '#1f51ff', 'weight': 2.5}
 ).add_to(m)
 
 # Add final AOI
 folium.GeoJson(
     geojson_output,
-    name="Song Hong AOI (2km Buffer)",
-    style_function=lambda x: {'fillColor': '#1a73e8', 'fillOpacity': 0.35, 'color': '#1a73e8', 'weight': 2}
+    name="Song Hong AOI (3km Buffer)",
+    style_function=lambda x: {'fillColor': '#1a73e8', 'fillOpacity': 0.3, 'color': '#1a73e8', 'weight': 2}
 ).add_to(m)
 
 folium.LayerControl().add_to(m)
