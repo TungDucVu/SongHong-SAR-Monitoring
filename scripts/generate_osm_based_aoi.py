@@ -175,11 +175,47 @@ main_out_path = r"d:\Future Career\SongHong-SAR-Monitoring\aoi\song_hong_aoi.geo
 with open(main_out_path, "w", encoding="utf-8") as f:
     json.dump(geojson_output, f, indent=2)
 
+buffer_out_path = r"d:\Future Career\SongHong-SAR-Monitoring\aoi\song_hong_buffer_2km.geojson"
+with open(buffer_out_path, "w", encoding="utf-8") as f:
+    json.dump(geojson_output, f, indent=2)
+
 backup_out_path = r"d:\Future Career\SongHong-SAR-Monitoring\outputs\esa_water_aoi.geojson"
 with open(backup_out_path, "w", encoding="utf-8") as f:
     json.dump(geojson_output, f, indent=2)
 
+# Construct centerline GeoJSON
+centerline_geojson_output = {
+  "type": "FeatureCollection",
+  "name": "song_hong_centerline",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Song Hong Centerline - Hanoi Section (OSM)",
+        "description": "Đường tim sông Hồng qua Hà Nội từ OpenStreetMap, giới hạn trong ranh giới Hà Nội",
+        "crs": "WGS84 / EPSG:4326",
+        "method": "OSM Hanoi boundary + OSM_Red_River_Centerline -> Clip by Hanoi",
+        "created": "2026-07-01",
+        "author": "Vu Duc Tung"
+      },
+      "geometry": mapping(clipped_river)
+    }
+  ]
+}
+
+centerline_out_path = r"d:\Future Career\SongHong-SAR-Monitoring\aoi\song_hong_centerline.geojson"
+with open(centerline_out_path, "w", encoding="utf-8") as f:
+    json.dump(centerline_geojson_output, f, indent=2)
+
 print(f"Saved final AOI GeoJSON to: {main_out_path}")
+print(f"Saved buffer 2km GeoJSON to: {buffer_out_path}")
+print(f"Saved centerline GeoJSON to: {centerline_out_path}")
 
 print("7. Creating interactive HTML map for visual verification...")
 m = folium.Map(location=[21.04, 105.86], zoom_start=10, tiles='openstreetmap')
