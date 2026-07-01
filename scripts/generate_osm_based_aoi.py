@@ -132,9 +132,9 @@ plot_path = r"d:\Future Career\SongHong-SAR-Monitoring\outputs\osm_river_check.p
 plt.savefig(plot_path, dpi=150)
 plt.close()
 
-print("6. Buffering clipped river by 3 km...")
-# 3km in degrees is approx 0.027
-buffer_dist = 0.027
+print("6. Buffering clipped river by 2 km...")
+# 2km in degrees is approx 0.018
+buffer_dist = 0.018
 final_aoi_geom = clipped_river.buffer(buffer_dist, cap_style=1, join_style=1)
 
 # Keep only parts inside Hanoi
@@ -142,7 +142,7 @@ final_aoi_geom = final_aoi_geom.intersection(hanoi_shape)
 
 # Check Area
 poly_area_km2 = final_aoi_geom.area * 111 * 103
-print(f"Final OSM-based AOI Area (within Hanoi, 3.0km buffer): {poly_area_km2:.2f} sq km")
+print(f"Final OSM-based AOI Area (within Hanoi, 2.0km buffer): {poly_area_km2:.2f} sq km")
 
 # Construct GeoJSON
 geojson_output = {
@@ -158,10 +158,10 @@ geojson_output = {
     {
       "type": "Feature",
       "properties": {
-        "name": "Song Hong AOI - Hanoi Section (OSM Centerline + 3km Buffer)",
-        "description": "Hành lang Sông Hồng qua Hà Nội, lấy buffer 3km từ centerline của OpenStreetMap, giới hạn trong ranh giới Hà Nội",
+        "name": "Song Hong AOI - Hanoi Section (OSM Centerline + 2km Buffer)",
+        "description": "Hành lang Sông Hồng qua Hà Nội, lấy buffer 2km từ centerline của OpenStreetMap, giới hạn trong ranh giới Hà Nội",
         "crs": "WGS84 / EPSG:4326",
-        "method": "OSM Hanoi boundary + OSM_Red_River_Centerline.buffer(3km) -> Clip by Hanoi",
+        "method": "OSM Hanoi boundary + OSM_Red_River_Centerline.buffer(2km) -> Clip by Hanoi",
         "created": "2026-07-01",
         "author": "Vu Duc Tung"
       },
@@ -210,7 +210,7 @@ folium.GeoJson(
 # Add final AOI
 folium.GeoJson(
     geojson_output,
-    name="Song Hong AOI (3km Buffer)",
+    name="Song Hong AOI (2km Buffer)",
     style_function=lambda x: {'fillColor': '#1a73e8', 'fillOpacity': 0.3, 'color': '#1a73e8', 'weight': 2}
 ).add_to(m)
 
