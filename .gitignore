@@ -1,0 +1,7 @@
+# Earth Engine and Jupyter outputs
+outputs/
+.ipynb_checkpoints/
+*.html
+*.tif
+*.csv
+*.json

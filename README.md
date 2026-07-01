@@ -27,17 +27,12 @@ Dự án xây dựng quy trình **bán tự động** giám sát biến động 
 SongHong-SAR-Monitoring/
 ├── aoi/
 │   ├── song_hong_aoi.geojson     # Vùng nghiên cứu (AOI)
-│   └── README.md
-├── scripts/
-│   ├── 00_environment_check.py   # Kiểm tra GEE & AOI
-│   ├── 01_data_collection.py     # Thu thập Sentinel-1 (2015–2024)
-│   ├── 02_preprocessing.py       # Tiền xử lý & đặc trưng SAR
-│   ├── 03_visualization_check.py # Kiểm tra trực quan
-│   └── 04_export_sample.py       # Export GeoTIFF mẫu
+│   └── README.md                 # Hướng dẫn upload AOI
 ├── docs/
 │   └── week1_notes.md            # Ghi chú kỹ thuật
-├── outputs/                      # Kết quả (không commit)
-└── Đề cương công việc thực tập.md
+├── outputs/                      # Thư mục chứa kết quả (không commit)
+├── week1_pipeline.ipynb          # Notebook quy trình Tuần 1 (Kiểm tra, thu thập, tiền xử lý, export)
+└── Đề cương công việc thực tập.md # Đề cương thực tập chi tiết
 ```
 
 ## ⚡ Bắt đầu nhanh
@@ -45,28 +40,21 @@ SongHong-SAR-Monitoring/
 ### 1. Cài đặt thư viện
 
 ```bash
-pip install earthengine-api geemap
+pip install earthengine-api geemap jupyter
 earthengine authenticate
 ```
 
-### 2. Chạy theo thứ tự
+### 2. Chạy quy trình
 
-```bash
-# Kiểm tra môi trường GEE
-python scripts/00_environment_check.py
+Mở Jupyter Notebook hoặc VS Code để chạy file:
+`week1_pipeline.ipynb`
 
-# Thống kê dữ liệu Sentinel-1 (2015–2024)
-python scripts/01_data_collection.py
-
-# Tiền xử lý và tính đặc trưng
-python scripts/02_preprocessing.py
-
-# Kiểm tra trực quan
-python scripts/03_visualization_check.py
-
-# Export GeoTIFF mẫu lên Google Drive
-python scripts/04_export_sample.py
-```
+Notebook này chứa đầy đủ 5 phần:
+1. **Kiểm tra môi trường GEE** (khởi tạo project, hiển thị bản đồ trực quan).
+2. **Thu thập thống kê dữ liệu Sentinel-1** (2015-2024), lưu thống kê ra CSV và JSON.
+3. **Tiền xử lý & Tính toán đặc trưng** (Lọc speckle Refined Lee Filter, tạo Monthly Composite, tính band VV/VH ratio).
+4. **Kiểm tra trực quan** (so sánh mùa mưa vs mùa khô, đối chiếu Sentinel-2 RGB).
+5. **Export dữ liệu mẫu** (xuất ảnh GeoTIFF 10m lên Google Drive).
 
 ## 🛰️ Dữ liệu
 
