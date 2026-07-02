@@ -1,151 +1,77 @@
 """
-Data collection and aggregation module for SongHong SAR Monitoring.
-Queries Sentinel-1 GRD, maps preprocessing, calculates yearly/monthly coverage, and generates composites.
+Collection module for SongHong SAR Monitoring project.
+Handles querying Sentinel-1 collections and generating seasonal median composites.
 """
 
 import ee
 from src.config import (
-    S1_COLLECTION, S1_INSTRUMENT_MODE, S1_ORBIT_PASS, 
-    S1_POLARISATIONS, S1_BANDS
+    S1_COLLECTION, S1_INSTRUMENT_MODE, S1_ORBIT_PASS
 )
-from src.preprocessing import preprocess_image
+from src.preprocessing import (
+    remove_border_noise, refined_lee_filter, add_derived_features
+)
 
-def get_s1_collection(aoi_geometry, start_date, end_date):
+def get_seasonal_s1_collection(year, season, aoi_geometry):
     """
-    Queries and filters raw Sentinel-1 GRD collection.
+    Queries, filters, and returns the raw Sentinel-1 collection for the specified year, season, and AOI.
+    Only includes descending pass and IW mode.
+    """
+    # Initialize base collection
+    s1_col = (ee.ImageCollection(S1_COLLECTION)
+              .filterBounds(aoi_geometry)
+              .filter(ee.Filter.eq('instrumentMode', S1_INSTRUMENT_MODE))
+              .filter(ee.Filter.eq('orbitProperties_pass', S1_ORBIT_PASS))
+              .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))
+              .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH')))
     
-    Args:
-        aoi_geometry: ee.Geometry to filter bounds.
-        start_date: str (YYYY-MM-DD).
-        end_date: str (YYYY-MM-DD).
+    # Set temporal range for calendar year
+    start_date = f'{year}-01-01'
+    end_date = f'{year}-12-31'
+    s1_year = s1_col.filterDate(start_date, end_date)
+    
+    # Filter by seasonal calendar months
+    if season == 'dry':
+        s1_filtered = s1_year.filter(ee.Filter.Or(
+            ee.Filter.calendarRange(1, 4, 'month'),
+            ee.Filter.calendarRange(11, 12, 'month')
+        ))
+    elif season == 'wet':
+        s1_filtered = s1_year.filter(ee.Filter.calendarRange(5, 10, 'month'))
+    else:
+        raise ValueError(f"Unknown season: {season}. Expected 'dry' or 'wet'")
         
-    Returns:
-        ee.ImageCollection containing filtered raw Sentinel-1 images.
-    """
-    collection = (ee.ImageCollection(S1_COLLECTION)
-                  .filterBounds(aoi_geometry)
-                  .filterDate(start_date, end_date)
-                  .filter(ee.Filter.eq('instrumentMode', S1_INSTRUMENT_MODE))
-                  .filter(ee.Filter.eq('orbitProperties_pass', S1_ORBIT_PASS))
-                  .filter(ee.Filter.listContains('transmitterReceiverPolarisation', S1_POLARISATIONS[0]))
-                  .filter(ee.Filter.listContains('transmitterReceiverPolarisation', S1_POLARISATIONS[1]))
-                  .select(S1_BANDS))
-    return collection
+    return s1_filtered
 
-def get_processed_collection(aoi_geometry, start_date, end_date):
+def create_seasonal_composite(year, season, aoi_geometry):
     """
-    Queries, filters, and pre-processes Sentinel-1 GRD collection.
+    Creates a speckle-filtered, derived-feature-rich seasonal median composite clipped to the AOI.
+    """
+    raw_col = get_seasonal_s1_collection(year, season, aoi_geometry)
     
-    Args:
-        aoi_geometry: ee.Geometry to filter bounds.
-        start_date: str (YYYY-MM-DD).
-        end_date: str (YYYY-MM-DD).
+    # Check size of collection
+    size = raw_col.size().getInfo()
+    if size == 0:
+        print(f"[Warning] No images found for {year} {season} season!")
+        return None
         
-    Returns:
-        ee.ImageCollection of pre-processed images with VV, VH, and VV_VH_ratio bands.
-    """
-    raw_col = get_s1_collection(aoi_geometry, start_date, end_date)
-    # Map preprocess_image with explicit casting
-    processed_col = raw_col.map(lambda img: preprocess_image(img, aoi_geometry))
-    return processed_col
-
-def get_monthly_composite(processed_collection, year, month, aoi_geometry):
-    """
-    Generates monthly median composite for a specific year and month.
+    # Apply border noise removal and Refined Lee filter to each image
+    processed_col = raw_col.map(remove_border_noise).map(lambda img: refined_lee_filter(img))
     
-    Args:
-        processed_collection: ee.ImageCollection preprocessed.
-        year: int.
-        month: int.
-        aoi_geometry: ee.Geometry.
-        
-    Returns:
-        ee.Image median composite.
-    """
-    start_date = ee.Date.fromYMD(year, month, 1)
-    end_date = start_date.advance(1, 'month')
+    # Calculate median composite
+    composite = processed_col.median()
     
-    composite = (processed_collection
-                 .filterDate(start_date, end_date)
-                 .median()
-                 .clip(aoi_geometry))
+    # Clip composite to AOI
+    composite_clipped = composite.clip(aoi_geometry)
     
-    # Format system:index as YYYY_MM
-    year_str = ee.Number(year).format('%04d')
-    month_str = ee.Number(month).format('%02d')
-    img_id = year_str.cat('_').cat(month_str)
+    # Add derived features (ratio and difference)
+    final_composite = add_derived_features(composite_clipped)
     
-    return ee.Image(composite.set({
+    # Set properties
+    final_composite = final_composite.set({
         'year': year,
-        'month': month,
-        'system:time_start': start_date.millis(),
-        'system:index': img_id
-    }))
-
-def get_annual_composite(processed_collection, year, aoi_geometry):
-    """
-    Generates annual median composite for a specific year.
+        'season': season,
+        'image_count': size,
+        'system:time_start': ee.Date(f'{year}-01-01').millis()
+    })
     
-    Args:
-        processed_collection: ee.ImageCollection preprocessed.
-        year: int.
-        aoi_geometry: ee.Geometry.
-        
-    Returns:
-        ee.Image annual median composite.
-    """
-    start_date = ee.Date.fromYMD(year, 1, 1)
-    end_date = start_date.advance(1, 'year')
-    
-    composite = (processed_collection
-                 .filterDate(start_date, end_date)
-                 .median()
-                 .clip(aoi_geometry))
-    
-    year_str = ee.Number(year).format('%04d')
-    
-    return ee.Image(composite.set({
-        'year': year,
-        'system:time_start': start_date.millis(),
-        'system:index': year_str
-    }))
-
-def get_coverage_statistics(s1_collection, start_year=2015, end_year=2024):
-    """
-    Computes count of S1 images per year and month.
-    
-    Args:
-        s1_collection: ee.ImageCollection raw or processed.
-        start_year: int.
-        end_year: int.
-        
-    Returns:
-        tuple (year_stats, month_stats_recent):
-          - year_stats: list of dicts {'year': y, 'count': c, 'status': s}
-          - month_stats: list of dicts {'month': m, 'month_name': n, 'count': c} for years 2020-2024
-    """
-    # 1. Stats by year
-    year_stats = []
-    for y in range(start_year, end_year + 1):
-        count = s1_collection.filter(ee.Filter.calendarRange(y, y, 'year')).size().getInfo()
-        status = "✅ OK" if count >= 20 else "⚠️ Warning (low count)" if count > 0 else "❌ No data"
-        year_stats.append({
-            'year': y,
-            'count': count,
-            'status': status
-        })
-        
-    # 2. Stats by month (2020-2024 recent period)
-    month_stats = []
-    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    recent_col = s1_collection.filterDate(f'{start_year+5}-01-01', f'{end_year}-12-31')
-    
-    for m in range(1, 13):
-        count = recent_col.filter(ee.Filter.calendarRange(m, m, 'month')).size().getInfo()
-        month_stats.append({
-            'month': m,
-            'month_name': month_names[m - 1],
-            'count': count
-        })
-        
-    return year_stats, month_stats
+    return final_composite

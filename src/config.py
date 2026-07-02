@@ -17,13 +17,23 @@ S1_POLARISATIONS = ['VV', 'VH']
 S1_BANDS = ['VV', 'VH']
 
 # Temporal settings
-START_DATE = '2015-01-01'
-END_DATE = '2024-12-31'
+START_YEAR = 2017
+END_YEAR = 2026
+
+# Seasonal definitions (months)
+# Dry season is split into Jan-Apr and Nov-Dec of the same calendar year Y
+DRY_SEASON_MONTHS = [1, 2, 3, 4, 11, 12]
+WET_SEASON_MONTHS = [5, 6, 7, 8, 9, 10]
 
 # Local directory and file paths
 PROJECT_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
 AOI_GEOJSON_PATH = os.path.join(PROJECT_ROOT, 'aoi', 'song_hong_aoi.geojson')
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'outputs')
+METADATA_JSON_PATH = os.path.join(OUTPUT_DIR, 's1_dataset_metadata.json')
+
+# Output asset path template for GEE
+# Example: projects/crested-library-500309-i2/assets/s1_composite_2024_dry
+ASSET_COMPOSITE_TEMPLATE = f'projects/{GEE_PROJECT}/assets/s1_composite_{{year}}_{{season}}'
 
 # Coordinate reference system and resolution for exporting
 EXPORT_CRS = 'EPSG:32648'  # UTM Zone 48N (suitable for Hanoi)
@@ -36,3 +46,4 @@ LAND_REF_POINT = [105.8600, 21.0200]
 # Reference backscatter dB thresholds for verification
 EXPECTED_WATER_VV_MAX = -15.0
 EXPECTED_LAND_VV_MIN = -10.0
+
