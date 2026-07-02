@@ -119,3 +119,11 @@ Quy trình sản xuất đã hoàn thành việc tạo và gửi 20 task tính t
    ```
 2. **Kế hoạch Phase 3 (Machine Learning)**: 
    Khi các task hoàn thành (chuyển trạng thái sang xanh lá), bộ dữ liệu 10 năm đã sẵn sàng. Ở tuần tiếp theo, chúng ta sẽ bắt đầu lấy mẫu huấn luyện (training samples) và huấn luyện mô hình **Random Forest** phân loại mặt nước và cát bãi bồi tự động dựa trên các lớp ảnh composite sạch này.
+
+   > [!WARNING]
+   > **CẢNH BÁO CHẤT LƯỢNG DỮ LIỆU NĂM 2026 (PHASE 3: ML)**
+   > * **Hiện trạng**: Thời điểm thực hiện dự án hiện tại là **tháng 07/2026**. Do đó, dữ liệu của năm 2026 đang bị **khuyết thiếu (incomplete)**:
+   >   * `2026 Dry`: Thiếu dữ liệu các tháng kiệt cuối năm (tháng 11 và 12).
+   >   * `2026 Wet`: Thiếu dữ liệu các tháng lũ cao điểm (tháng 8, 9 và 10).
+   > * **Quy định huấn luyện**: **KHÔNG** lấy mẫu huấn luyện (training samples) từ dữ liệu của năm 2026 để tránh lệch mô hình (bias). Chỉ sử dụng chuỗi dữ liệu trọn vẹn từ **2017 đến 2025** để huấn luyện và đánh giá chéo (validation).
+   > * **Sử dụng năm 2026**: Chỉ sử dụng dữ liệu 2026 làm tập dữ liệu kiểm chứng thực tế (Inference/Testing) sau khi mô hình đã được tối ưu hóa.
