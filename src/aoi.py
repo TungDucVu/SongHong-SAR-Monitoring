@@ -21,24 +21,15 @@ def load_local_aoi():
 def get_aoi_collection(project_id=None):
     """
     Returns ee.FeatureCollection of the AOI.
-    First tries to load from GEE Asset. If not found, loads from local GeoJSON.
+    Loads directly from the local GeoJSON file to guarantee consistency.
     """
     # Initialize ee if not already initialized
     if not ee.data.is_initialized():
         ee.Initialize(project=project_id)
         
-    try:
-        # Try loading from GEE Asset
-        aoi_fc = ee.FeatureCollection(ASSET_AOI_PATH)
-        # Force a call to verify if asset exists
-        aoi_fc.limit(1).size().getInfo()
-        print(f"[AOI] Loaded from GEE Asset: {ASSET_AOI_PATH}")
-        return aoi_fc
-    except Exception:
-        print(f"[AOI] Asset not found. Loading from local GeoJSON...")
-        geojson_data = load_local_aoi()
-        aoi_fc = ee.FeatureCollection(geojson_data)
-        return aoi_fc
+    geojson_data = load_local_aoi()
+    aoi_fc = ee.FeatureCollection(geojson_data)
+    return aoi_fc
 
 def get_aoi_geometry(project_id=None):
     """

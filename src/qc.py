@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from src.config import (
     OUTPUT_DIR, METADATA_JSON_PATH, WATER_REF_POINT, LAND_REF_POINT,
-    EXPECTED_WATER_VV_MAX, EXPECTED_LAND_VV_MIN
+    EXPECTED_WATER_VV_MAX, EXPECTED_LAND_VV_MIN, PROJECT_ROOT
 )
 
 def update_metadata_json(year, season, stats_dict):
@@ -217,6 +217,21 @@ def create_comparison_map(composite, aoi_geometry, year, season):
         style_function=lambda x: {'fillColor': 'none', 'color': '#1a73e8', 'weight': 2, 'opacity': 0.8}
     ).add_to(m)
     
+    # Add Hanoi Boundary
+    hanoi_geojson_path = os.path.join(PROJECT_ROOT, 'aoi', 'hanoi_boundary.geojson')
+    if os.path.exists(hanoi_geojson_path):
+        try:
+            with open(hanoi_geojson_path, 'r', encoding='utf-8') as f:
+                hanoi_data = json.load(f)
+            folium.GeoJson(
+                hanoi_data,
+                name="Hanoi Boundary",
+                style_function=lambda x: {'fillColor': 'none', 'color': '#ff3300', 'weight': 2.5, 'dashArray': '5, 5', 'opacity': 0.8}
+            ).add_to(m)
+            print("[QC] Added Hanoi Boundary layer to map.")
+        except Exception as e:
+            print(f"[QC] Failed to add Hanoi Boundary: {e}")
+            
     folium.LayerControl().add_to(m)
     
     html_path = os.path.join(OUTPUT_DIR, f'comparison_{year}_{season}.html')

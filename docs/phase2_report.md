@@ -87,26 +87,26 @@ Quy trình sản xuất đã hoàn thành việc tạo và gửi 20 task tính t
 
 | STT | Năm | Mùa | Tên Asset | Task ID trên GEE | Trạng thái Task |
 | :---: | :---: | :---: | :--- | :--- | :---: |
-| 1 | 2017 | Dry | `s1_composite_2017_dry` | `JY2RILH2KET6WKM4J4RHICFQ` | Đang chạy nền |
-| 2 | 2017 | Wet | `s1_composite_2017_wet` | `OBA6HC4DKBZSROCS7SNHBUBJ` | Đang chạy nền |
-| 3 | 2018 | Dry | `s1_composite_2018_dry` | `AFLMU6XVO24GH6OGHRSMIANV` | Đang chạy nền |
-| 4 | 2018 | Wet | `s1_composite_2018_wet` | `QKIJCHXP6ETPSN2VBJBVQUZZ` | Đang chạy nền |
-| 5 | 2019 | Dry | `s1_composite_2019_dry` | `5IUVZ4XC7T6L6T7R7QYGQJY6` | Đang chạy nền |
-| 6 | 2019 | Wet | `s1_composite_2019_wet` | `QDPC7YUWZRLWRLDRIBN75XI3` | Đang chạy nền |
-| 7 | 2020 | Dry | `s1_composite_2020_dry` | `IGZVCCLFAV356VROXE3FO2IK` | Đang chạy nền |
-| 8 | 2020 | Wet | `s1_composite_2020_wet` | `CROWYUCPMRSLIU2MLPPDACFG` | Đang chạy nền |
-| 9 | 2021 | Dry | `s1_composite_2021_dry` | `ALZU5XBONVX2X23ZAC3NNHEA` | Đang chạy nền |
-| 10 | 2021 | Wet | `s1_composite_2021_wet` | `WHWERNFW5HE6CC4L4YCHOFHB` | Đang chạy nền |
-| 11 | 2022 | Dry | `s1_composite_2022_dry` | `T3V7S6EKE4LVGJNAS5IL67A4` | Đang chạy nền |
-| 12 | 2022 | Wet | `s1_composite_2022_wet` | `JFLRSLWCPPC7MUPWHBAVAWDN` | Đang chạy nền |
-| 13 | 2023 | Dry | `s1_composite_2023_dry` | `C5JZEMPFGOBHPQIAKFTOG4YV` | Đang chạy nền |
-| 14 | 2023 | Wet | `s1_composite_2023_wet` | `6UIUILMN244A2OMBOYXP6BQH` | Đang chạy nền |
-| 15 | 2024 | Dry | `s1_composite_2024_dry` | `GYXRQDAM7QJAPCZ4EU25X24V` | Đang chạy nền |
-| 16 | 2024 | Wet | `s1_composite_2024_wet` | `E73L33PEJEWMZ4BCKCCPZRYE` | Đang chạy nền |
-| 17 | 2025 | Dry | `s1_composite_2025_dry` | `6OP66G3LOKBVOF7ENALBRYKW` | Đang chạy nền |
-| 18 | 2025 | Wet | `s1_composite_2025_wet` | `HOTPNJTGTQHJ4EGLKPCMZPWS` | Đang chạy nền |
-| 19 | 2026 | Dry | `s1_composite_2026_dry` | `PZAJZO3G4UH2MOSJ562OLAXU` | Đang chạy nền |
-| 20 | 2026 | Wet | `s1_composite_2026_wet` | `SWNJJJTGAVGUFMDNLNRFVI7E` | Đang chạy nền |
+| 1 | 2017 | Dry | `s1_composite_2017_dry` | `J562Y6YNXDYG4LXUTH2R6ANM` | Đang chạy nền |
+| 2 | 2017 | Wet | `s1_composite_2017_wet` | `2MF4TRNGMJMWN7ZDCNFFJRMN` | Đang chạy nền |
+| 3 | 2018 | Dry | `s1_composite_2018_dry` | `ZVNAPNU2EVHEQXMEMZ7GTBUZ` | Đang chạy nền |
+| 4 | 2018 | Wet | `s1_composite_2018_wet` | `AJ4FZUQO4PHNSPE7NGX346VV` | Đang chạy nền |
+| 5 | 2019 | Dry | `s1_composite_2019_dry` | `VDNZ6OT6YJMKYJ6GDR5KISGX` | Đang chạy nền |
+| 6 | 2019 | Wet | `s1_composite_2019_wet` | `WU4VO4FINDDBGQVCRF2OHLB7` | Đang chạy nền |
+| 7 | 2020 | Dry | `s1_composite_2020_dry` | `BLHQEU26HK2CGMGDOPZW5F45` | Đang chạy nền |
+| 8 | 2020 | Wet | `s1_composite_2020_wet` | `D3RSBWHSQZNRAWQF5FBXC2DZ` | Đang chạy nền |
+| 9 | 2021 | Dry | `s1_composite_2021_dry` | `E3F2QH5IQZRUVOK2CVEYUVO4` | Đang chạy nền |
+| 10 | 2021 | Wet | `s1_composite_2021_wet` | `3C6T4LDX6E2B7CCCUY4RHARU` | Đang chạy nền |
+| 11 | 2022 | Dry | `s1_composite_2022_dry` | `TYFPZCGK5DFHB26BIO3XMB3Q` | Đang chạy nền |
+| 12 | 2022 | Wet | `s1_composite_2022_wet` | `CWVVGRR6LNXHKZABG4WRRVOK` | Đang chạy nền |
+| 13 | 2023 | Dry | `s1_composite_2023_dry` | `DMCKBBHRK5XSPPUOPLK2ZZKY` | Đang chạy nền |
+| 14 | 2023 | Wet | `s1_composite_2023_wet` | `KBPTNCJWJIJVC3CSFBHJHVI7` | Đang chạy nền |
+| 15 | 2024 | Dry | `s1_composite_2024_dry` | `SXCPMKRTKZ223ATF6RINU4IS` | Đang chạy nền |
+| 16 | 2024 | Wet | `s1_composite_2024_wet` | `VOARWPKT4GMKW2EXQO4DIE4V` | Đang chạy nền |
+| 17 | 2025 | Dry | `s1_composite_2025_dry` | `OGIUDX6FJXDWBDK3H6WVZIM3` | Đang chạy nền |
+| 18 | 2025 | Wet | `s1_composite_2025_wet` | `SIS7G5XSLX2XAWNHUO63OV4A` | Đang chạy nền |
+| 19 | 2026 | Dry | `s1_composite_2026_dry` | `WFGOJGTACHNIY7UWTG7CME7R` | Đang chạy nền |
+| 20 | 2026 | Wet | `s1_composite_2026_wet` | `UI4RSRWCSL6RHV52J62IEADH` | Đang chạy nền |
 
 ---
 
