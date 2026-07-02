@@ -132,13 +132,13 @@ plot_path = r"d:\Future Career\SongHong-SAR-Monitoring\outputs\osm_river_check.p
 plt.savefig(plot_path, dpi=150)
 plt.close()
 
-print("6. Buffering clipped river by 2 km...")
+print("6. Buffering entire centerline by 2 km...")
 # 2km in degrees is approx 0.018
 buffer_dist = 0.018
-final_aoi_geom = clipped_river.buffer(buffer_dist, cap_style=1, join_style=1)
+raw_buffer_geom = osm_river_geom.buffer(buffer_dist, cap_style=1, join_style=1)
 
-# Keep only parts inside Hanoi
-final_aoi_geom = final_aoi_geom.intersection(hanoi_shape)
+print("7. Clipping the 2km buffer by Hanoi boundary...")
+final_aoi_geom = raw_buffer_geom.intersection(hanoi_shape)
 
 # Check Area
 poly_area_km2 = final_aoi_geom.area * 111 * 103
@@ -217,7 +217,7 @@ print(f"Saved final AOI GeoJSON to: {main_out_path}")
 print(f"Saved buffer 2km GeoJSON to: {buffer_out_path}")
 print(f"Saved centerline GeoJSON to: {centerline_out_path}")
 
-print("7. Creating interactive HTML map for visual verification...")
+print("8. Creating interactive HTML map for visual verification...")
 m = folium.Map(location=[21.04, 105.86], zoom_start=10, tiles='openstreetmap')
 
 # Add Google Satellite base map
