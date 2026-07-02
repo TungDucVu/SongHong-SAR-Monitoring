@@ -183,19 +183,20 @@ def create_comparison_map(composite, aoi_geometry, year, season):
     ).add_to(m)
     
     # GEE tile layers helper
-    def add_ee_layer(folium_map, ee_image_object, vis_params, name):
+    def add_ee_layer(folium_map, ee_image_object, vis_params, name, opacity=1.0):
         map_id_dict = ee.Image(ee_image_object).getMapId(vis_params)
         folium.raster_layers.TileLayer(
             tiles=map_id_dict['tile_fetcher'].url_format,
             attr='Google Earth Engine',
             name=name,
             overlay=True,
-            control=True
+            control=True,
+            opacity=opacity
         ).add_to(folium_map)
         
     # Sentinel-1 VV visualization
     s1_vis = {'bands': ['VV'], 'min': -22, 'max': -5, 'palette': ['black', 'white']}
-    add_ee_layer(m, composite, s1_vis, f'Sentinel-1 VV ({year} {season})')
+    add_ee_layer(m, composite, s1_vis, f'Sentinel-1 VV ({year} {season})', opacity=0.45)
     
     # Sentinel-2 RGB visualization (B4, B3, B2)
     s2_vis = {'bands': ['B4', 'B3', 'B2'], 'min': 0, 'max': 3000}
