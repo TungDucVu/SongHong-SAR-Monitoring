@@ -31,9 +31,10 @@ SongHong-SAR-Monitoring/
 │   ├── collection.py             # Truy vấn, thống kê, tạo monthly/annual composites
 │   └── utils.py                  # Xuất báo cáo CSV/JSON, export GeoTIFF, lưu map HTML
 ├── docs/
-│   └── week1_notes.md            # Ghi chú kỹ thuật chi tiết Tuần 1
+│   └── report_phase1_phase2.md   # Báo cáo tổng hợp Phase 1 & Phase 2 (Đầy đủ)
 ├── outputs/                      # Thư mục chứa kết quả cục bộ (được bỏ qua bởi git)
 ├── week1_pipeline.ipynb          # Jupyter Notebook tích hợp chạy toàn bộ quy trình Tuần 1
+├── week2_pipeline.ipynb          # Jupyter Notebook tích hợp chạy toàn bộ quy trình Tuần 2
 ├── .gitignore                    # Quản lý các file không commit
 └── Đề cương công việc thực tập.md # Đề cương thực tập chi tiết
 ```
