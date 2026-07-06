@@ -28,8 +28,19 @@ WET_SEASON_MONTHS = [5, 6, 7, 8, 9, 10]
 # Local directory and file paths
 PROJECT_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
 AOI_GEOJSON_PATH = os.path.join(PROJECT_ROOT, 'aoi', 'song_hong_aoi.geojson')
+TRAINING_POLYGONS_PATH = os.path.join(PROJECT_ROOT, 'aoi', 'training_polygons.geojson')
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'outputs')
 METADATA_JSON_PATH = os.path.join(OUTPUT_DIR, 's1_dataset_metadata.json')
+
+# Machine Learning Settings
+RF_NUM_TREES = 200
+CLASSIFIER_FEATURES = ['VV', 'VH', 'angle', 'VV_VH_ratio', 'VV_VH_diff']
+CLASS_LABELS = {
+    0: 'Water',
+    1: 'Sandbar',
+    2: 'Others'
+}
+
 
 # Output asset path template for GEE
 # Example: projects/crested-library-500309-i2/assets/s1_composite_2024_dry

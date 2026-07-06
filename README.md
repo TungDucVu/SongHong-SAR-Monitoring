@@ -31,7 +31,8 @@ SongHong-SAR-Monitoring/
 │   ├── collection.py             # Truy vấn, thống kê, tạo monthly/annual composites
 │   └── utils.py                  # Xuất báo cáo CSV/JSON, export GeoTIFF, lưu map HTML
 ├── docs/
-│   └── report_phase1_phase2.md   # Báo cáo tổng hợp Phase 1 & Phase 2 (Đầy đủ)
+│   ├── report_phase1_phase2.md   # Báo cáo tổng hợp Phase 1 & Phase 2 (Đầy đủ)
+│   └── report_phase3.md          # Báo cáo tổng hợp Phase 3 (Huấn luyện RF & Hậu xử lý đường bờ)
 ├── outputs/                      # Thư mục chứa kết quả cục bộ (được bỏ qua bởi git)
 ├── week1_pipeline.ipynb          # Jupyter Notebook tích hợp chạy toàn bộ quy trình Tuần 1
 ├── week2_pipeline.ipynb          # Jupyter Notebook tích hợp chạy toàn bộ quy trình Tuần 2
@@ -83,6 +84,6 @@ Chạy lần lượt các cell để thực thi:
 | Tuần | Hạng mục công việc | Deadline | Trạng thái |
 |---|---|---|---|
 | **Tuần 1** | **Chuẩn bị dữ liệu & Thiết lập môi trường** | Ngày thứ 7 | ✅ Hoàn thành |
-| **Tuần 2** | **Xây dựng mô hình Machine Learning (Random Forest)** | Ngày thứ 14 | ⏳ Chờ thực hiện |
-| **Tuần 3** | **Tự động hóa chuỗi thời gian & Đánh giá độ chính xác** | Ngày thứ 21 | ⏳ Chờ thực hiện |
-| **Tuần 4** | **Phân tích hình thái, đối chiếu thủy văn & Báo cáo** | Ngày cuối tháng | ⏳ Chờ thực hiện |
+| **Tuần 2** | **Xây dựng mô hình Machine Learning (Random Forest)** | Ngày thứ 14 | ✅ Hoàn thành |
+| **Tuần 3** | **Đánh giá độ chính xác & Hậu xử lý Đường bờ** | Ngày thứ 21 | ✅ Hoàn thành |
+| **Tuần 4** | **Phân tích hình thái thời gian, đối chiếu thủy văn & Báo cáo** | Ngày cuối tháng | ⏳ Chờ thực hiện |
