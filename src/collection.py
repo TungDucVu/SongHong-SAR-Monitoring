@@ -8,8 +8,9 @@ from src.config import (
     S1_COLLECTION, S1_INSTRUMENT_MODE, S1_ORBIT_PASS
 )
 from src.preprocessing import (
-    remove_border_noise, refined_lee_filter, add_derived_features
+    remove_border_noise, refined_lee_filter
 )
+from src.classification import create_feature_stack
 
 def get_seasonal_s1_collection(year, season, aoi_geometry):
     """
@@ -54,6 +55,22 @@ def create_seasonal_composite(year, season, aoi_geometry):
         print(f"[Warning] No images found for {year} {season} season!")
         return None
         
+    # Query and print Sentinel-1 image dates
+    import json
+    try:
+        s1_dates = raw_col.aggregate_array('system:time_start').map(
+            lambda t: ee.Date(t).format('YYYY-MM-dd')
+        ).getInfo()
+        s1_dates_sorted = sorted(list(set(s1_dates)))
+    except Exception as e:
+        print(f"[Warning] Failed to fetch Sentinel-1 image list: {e}")
+        s1_dates_sorted = []
+        
+    print(f"\nSentinel-1 {season.capitalize()}")
+    print(f"Images: {len(s1_dates_sorted)}")
+    for d in s1_dates_sorted:
+        print(f"  {d}")
+        
     # Apply border noise removal and Refined Lee filter to each image
     processed_col = raw_col.map(remove_border_noise).map(lambda img: refined_lee_filter(img))
     
@@ -63,14 +80,15 @@ def create_seasonal_composite(year, season, aoi_geometry):
     # Clip composite to AOI
     composite_clipped = composite.clip(aoi_geometry)
     
-    # Add derived features (ratio and difference)
-    final_composite = add_derived_features(composite_clipped)
+    # Add derived features (Phase 2 Feature stack)
+    final_composite = create_feature_stack(composite_clipped)
     
     # Set properties
     final_composite = final_composite.set({
         'year': year,
         'season': season,
         'image_count': size,
+        's1_dates_json': json.dumps(s1_dates_sorted),
         'system:time_start': ee.Date(f'{year}-01-01').millis()
     })
     

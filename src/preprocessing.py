@@ -5,7 +5,7 @@ and derived feature extraction (Ratio, Difference).
 """
 
 import ee
-from src.config import S1_BANDS
+from src.config import S1_BANDS, S1_IW_ANGLE_MIN, S1_IW_ANGLE_MAX
 
 def db_to_power(img):
     """Convert backscatter intensity from decibels (dB) to power (linear scale)."""
@@ -15,23 +15,29 @@ def power_to_db(img):
     """Convert backscatter intensity from power (linear scale) to decibels (dB)."""
     return img.log10().multiply(10.0)
 
-def remove_border_noise(image):
+def remove_border_noise(image, use_intensity_mask=False):
     """
     Removes border noise and low-intensity edge anomalies from Sentinel-1 images.
-    Uses incidence angle thresholds and minimum intensity masking.
+    Uses incidence angle thresholds and optional minimum intensity masking.
+    
+    CRITICAL CONSTRAINT: Native Sentinel-1 projection and scale are strictly preserved.
+    No .reproject() or .setDefaultProjection() is called.
     """
-    # 1. Mask by incidence angle (valid range for IW mode is approx 30.6 to 45.9 degrees)
+    # 1. Mask by incidence angle (valid range for IW mode from config.py)
     angle = image.select('angle')
-    angle_mask = angle.gt(30.6).And(angle.lt(45.9))
+    angle_mask = angle.gt(S1_IW_ANGLE_MIN).And(angle.lt(S1_IW_ANGLE_MAX))
     
-    # 2. Mask out extreme low-intensity backscatter values (usually noise at image borders)
-    vv = image.select('VV')
-    vh = image.select('VH')
-    vv_mask = vv.gt(-30.0)
-    vh_mask = vh.gt(-35.0)
+    clean_mask = angle_mask
     
-    # Combined mask
-    clean_mask = angle_mask.And(vv_mask).And(vh_mask)
+    # 2. Mask out extreme low-intensity backscatter values (only if explicitly enabled)
+    # This is a secondary constraint to prevent removing valid deep water areas.
+    if use_intensity_mask:
+        vv = image.select('VV')
+        vh = image.select('VH')
+        vv_mask = vv.gt(-30.0)
+        vh_mask = vh.gt(-35.0)
+        clean_mask = clean_mask.And(vv_mask).And(vh_mask)
+        
     return image.updateMask(clean_mask)
 
 def apply_refined_lee_single_band(power_img, band_name):
@@ -182,6 +188,14 @@ def refined_lee_filter(image):
     """
     Applies the edge-preserving Refined Lee Speckle Filter to a Sentinel-1 image.
     Uses static band lists to be fully compatible with server-side map operations in GEE.
+    
+    CRITICAL CONSTRAINTS:
+    1. Terrain Correction: No additional manual Range-Doppler Terrain Correction (RDTC)
+       is required because GEE's COPERNICUS/S1_GRD dataset has already been orthorectified
+       and terrain-corrected by Google using the SRTM DEM (or equivalent). Do not duplicate or
+       re-implement manual terrain correction.
+    2. Projection: Native Sentinel-1 projection and scale must be strictly preserved.
+       The function must not call .reproject() or .setDefaultProjection().
     """
     proc_bands = ['VV', 'VH']
     existing_keep_bands = ['angle']
@@ -228,3 +242,76 @@ def add_derived_features(image):
     diff_db = power_to_db(diff_linear_clamped).rename('VV_VH_diff')
     
     return image.addBands([ratio, diff_db])
+
+def check_preprocessing_quality(image):
+    """
+    Performs Quality Control checks on the preprocessed Sentinel-1 image.
+    Calculates spatial mean backscatter over reference water/land polygons.
+    Logs warnings if values fall outside expected ranges.
+    Raises a ValueError (stops execution) if NaN/Infinity/None pixels are detected.
+    
+    CRITICAL CONSTRAINT: Original projection and scale are preserved.
+    """
+    from src.config import (
+        WATER_REF_POLYGON, LAND_REF_POLYGON,
+        EXPECTED_WATER_VV_MAX, EXPECTED_WATER_VH_MAX, EXPECTED_LAND_VV_MIN
+    )
+    import logging
+    import math
+    
+    logger = logging.getLogger(__name__)
+    
+    # Create GEE geometry objects
+    water_geom = ee.Geometry.Polygon(WATER_REF_POLYGON)
+    land_geom = ee.Geometry.Polygon(LAND_REF_POLYGON)
+    
+    # Calculate mean backscatter values (must specify native scale=10 and projection)
+    water_stats = image.select(['VV', 'VH']).reduceRegion(
+        reducer=ee.Reducer.mean(),
+        geometry=water_geom,
+        scale=10,
+        bestEffort=True
+    )
+    
+    land_stats = image.select(['VV']).reduceRegion(
+        reducer=ee.Reducer.mean(),
+        geometry=land_geom,
+        scale=10,
+        bestEffort=True
+    )
+    
+    # Get values from server side
+    # (Since this is QC validation at the end of the phase, it is allowed to call .getInfo() to inspect)
+    try:
+        water_vv = water_stats.get('VV').getInfo()
+        water_vh = water_stats.get('VH').getInfo()
+        land_vv = land_stats.get('VV').getInfo()
+    except Exception as e:
+        logger.error(f"Failed to fetch QC statistics from GEE: {e}")
+        raise ValueError(f"GEE QC Fetch Failure: {e}")
+        
+    # Check for NaN/Inf/None
+    for val, name in [(water_vv, "Water VV"), (water_vh, "Water VH"), (land_vv, "Land VV")]:
+        if val is None or math.isnan(val) or math.isinf(val):
+            logger.error(f"QC FAILED: {name} mean value is invalid (NaN, Inf, or None).")
+            raise ValueError(f"QC FAILED: Invalid pixel value {val} detected in {name} reference polygon.")
+            
+    # Soft range validation
+    logger.info(f"QC: Preprocessing verification statistics computed:")
+    logger.info(f" - Water Polygon Mean: VV={water_vv:.2f} dB (expected <= {EXPECTED_WATER_VV_MAX:.2f} dB)")
+    logger.info(f" - Water Polygon Mean: VH={water_vh:.2f} dB (expected <= {EXPECTED_WATER_VH_MAX:.2f} dB)")
+    logger.info(f" - Land Polygon Mean:  VV={land_vv:.2f} dB (expected >= {EXPECTED_LAND_VV_MIN:.2f} dB)")
+    
+    if water_vv > EXPECTED_WATER_VV_MAX:
+        logger.warning(f"QC WARNING: Water VV mean ({water_vv:.2f} dB) exceeds expected max threshold ({EXPECTED_WATER_VV_MAX:.2f} dB).")
+    if water_vh > EXPECTED_WATER_VH_MAX:
+        logger.warning(f"QC WARNING: Water VH mean ({water_vh:.2f} dB) exceeds expected max threshold ({EXPECTED_WATER_VH_MAX:.2f} dB).")
+    if land_vv < EXPECTED_LAND_VV_MIN:
+        logger.warning(f"QC WARNING: Land VV mean ({land_vv:.2f} dB) is below expected min threshold ({EXPECTED_LAND_VV_MIN:.2f} dB).")
+        
+    return {
+        'water_vv': water_vv,
+        'water_vh': water_vh,
+        'land_vv': land_vv,
+        'status': 'PASS'
+    }

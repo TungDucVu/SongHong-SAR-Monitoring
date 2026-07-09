@@ -16,7 +16,12 @@ import ee
 from src.config import GEE_PROJECT, START_YEAR, END_YEAR, EXPORT_SCALE, EXPORT_CRS, ASSET_COMPOSITE_TEMPLATE
 from src.aoi import get_aoi_geometry
 from src.collection import create_seasonal_composite
-from src.qc import evaluate_reference_points, plot_backscatter_histograms, create_comparison_map, update_metadata_json
+from src.qc import (
+    evaluate_reference_points, plot_backscatter_histograms, create_comparison_map,
+    update_metadata_json, get_s2_metadata, create_contrast_map
+)
+from src.classification import verify_feature_correlation, verify_multiclass_textures
+from src.qa_suite import generate_qa_suite
 
 def run_prototype(year=2024):
     """
@@ -55,6 +60,10 @@ def run_prototype(year=2024):
         print(f"    - Water VV backscatter (expected <= -15dB): {qc_report['water_ref_vv']:.2f} dB ({qc_report['water_check']})")
         print(f"    - Land VV backscatter (expected >= -10dB): {qc_report['land_ref_vv']:.2f} dB ({qc_report['land_check']})")
         
+        # Verify feature correlation and separability (Phase 2 QC)
+        verify_feature_correlation(composite, aoi_geometry)
+        verify_multiclass_textures(composite)
+
         # Generate histograms
         print("  Sampling pixels and generating backscatter histograms...")
         hist_path = plot_backscatter_histograms(composite, aoi_geometry, year, season)
@@ -63,16 +72,37 @@ def run_prototype(year=2024):
         print("  Creating interactive comparison map (S1 vs S2)...")
         map_path = create_comparison_map(composite, aoi_geometry, year, season)
         
+        # Create contrast map (Phase 2 Visual QC)
+        print("  Creating interactive contrast map (VV_contrast)...")
+        contrast_map_path = create_contrast_map(composite, aoi_geometry, year, season)
+        
+        # Generate the comprehensive Phase 2 QA Suite
+        generate_qa_suite(composite, aoi_geometry, year, season)
+        
+        # Extract GEE dates list
+        import json
+        try:
+            s1_dates_str = composite.get('s1_dates_json').getInfo()
+            s1_dates = json.loads(s1_dates_str)
+        except Exception:
+            s1_dates = []
+            
+        s2_info = get_s2_metadata(year, season, aoi_geometry)
+        
         # Save metadata
         stats_dict = {
             "year": year,
             "season": season,
-            "image_count": composite.get('image_count').getInfo(),
+            "s1_image_count": len(s1_dates),
+            "s1_dates": s1_dates,
+            "s2_image_count": s2_info['count'],
+            "s2_dates": s2_info['dates'],
             "status": qc_report['status'],
             "water_vv": qc_report['water_ref_vv'],
             "land_vv": qc_report['land_ref_vv'],
             "histogram_plot": os.path.basename(hist_path) if hist_path else None,
-            "comparison_map": os.path.basename(map_path) if map_path else None
+            "comparison_map": os.path.basename(map_path) if map_path else None,
+            "contrast_map": os.path.basename(contrast_map_path) if contrast_map_path else None
         }
         update_metadata_json(year, season, stats_dict)
 

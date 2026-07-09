@@ -1,143 +1,268 @@
-# BÁO CÁO CHI TIẾT PHASE 3: HUẤN LUYỆN MÔ HÌNH RANDOM FOREST, ĐÁNH GIÁ ĐỘ CHÍNH XÁC & HẬU XỬ LÝ ĐƯỜNG BỜ SÔNG HỒNG (2024)
+# BÁO CÁO CHI TIẾT PHASE 3: PHÂN LOẠI MACHINE LEARNING & TRÍCH XUẤT SHORELINE NGHIÊN CỨU SÔNG HỒNG
 
 **Dự án:** Giám sát biến động đường bờ và bãi bồi Sông Hồng tại Hà Nội bằng dữ liệu Sentinel-1 SAR  
-**Người thực hiện:** Vũ Đức Tùng  
-**Thời gian thực hiện:** Tháng 07/2026  
+**Trạng thái:** Kế hoạch thực hiện chuẩn hóa (Frozen Pipeline)  
 
 ---
 
 ## MỤC LỤC
-1. [Tổng quan Phase 3 & Nhiệm vụ thực hiện](#1-tổng-quan-phase-3--nhiệm-vụ-thực-hiện)
-2. [Thiết lập & Tinh lọc Đa giác mẫu huấn luyện (Ground Truth Polygons)](#2-thiết-lập--tinh-lọc-đa-giác-mẫu-huấn-luyện-ground-truth-polygons)
-3. [Huấn luyện Mô hình Random Forest & Đánh giá độ chính xác (2024)](#3-huấn-luyện-mô-hình-random-forest--đánh-giá-độ-chính-xác-2024)
-4. [Chuỗi xử lý hậu kỳ nâng cao (Post-Processing Pipeline)](#4-chuỗi-xử-lý-hậu-kỳ-nâng-cao-post-processing-pipeline)
-5. [Trực quan hóa Bản đồ Folium & Trích xuất Đường bờ Vector](#5-trực-quan-hóa-bản-đồ-folium--trích-xuất-đường-bờ-vector)
-6. [Kết luận & Định hướng tiếp theo](#6-kết-luận--định-hướng-tiếp-theo)
+1. [Tổng quan Pipeline đề xuất](#tong-quan-pipeline-de-xuat)
+2. [Chi tiết các Phase & Sub-phases](#chi-tiet-cac-phase--sub-phases)
+   * [Phase 1: SAR Data Preparation (Chuẩn bị dữ liệu)](#phase-1-sar-data-preparation-chuan-bi-du-lieu)
+   * [Phase 2: Feature Engineering (Trích xuất đặc trưng)](#phase-2-feature-engineering-trich-xuat-dac-trung)
+   * [Phase 3: Random Forest Classification (Phân loại máy học)](#phase-3-random-forest-classification-phan-loai-may-hoc)
+   * [Phase 4: Classification Refinement (Hậu xử lý mặt nạ)](#phase-4-classification-refinement-hau-xu-ly-mat-na)
+   * [Phase 5: Water–Sand Shared Boundary Extraction (Trích xuất đường bờ)](#phase-5-water-sand-shared-boundary-extraction-trich-xuat-duong-bo)
+   * [Phase 6: Shoreline Cleaning (Lọc sạch topo đường bờ)](#phase-6-shoreline-cleaning-loc-sach-topo-duong-bo)
+   * [Phase 7: Shoreline Smoothing & Simplification (Làm mượt đường bờ)](#phase-7-shoreline-smoothing--simplification-lam-muot-duong-bo)
+   * [Phase 8: Final Quality Control and Shoreline Validation (Kiểm chứng và đánh giá chất lượng cuối cùng)](#phase-8-final-quality-control-and-shoreline-validation-kiem-chung-va-danh-gia-chat-luong-cuoi-cung)
+3. [Đề xuất cấu trúc Luận văn/Paper: Chương 4 – Đánh giá Thực nghiệm (Experimental Evaluation)](#de-xuat-cau-truc-luan-vanpaper-chuong-4--danh-gia-thuc-nghiem-experimental-evaluation)
+4. [Kế hoạch triển khai mã nguồn](#ke-hoach-trien-khai-ma-nguon)
 
 ---
 
-## 1. TỔNG QUAN PHASE 3 & NHIỆM VỤ THỰC HIỆN
+## TỔNG QUAN PIPELINE ĐỀ XUẤT
 
-Trong Phase 3, dự án tập trung vào việc hiện thực hóa mô hình học máy phân loại lớp phủ bề mặt và trích xuất đường bờ thực tế từ dữ liệu Sentinel-1 SAR 2024 đã được chuẩn bị ở các giai đoạn trước. Các hạng mục công việc chính bao gồm:
-* **Chuẩn hóa mẫu huấn luyện**: Xây dựng, sàng lọc và tinh chỉnh thủ công các đa giác mẫu đại diện (Ground Truth) để huấn luyện 2 lớp Nước (Water) và Bãi cát (Sandbar), kết hợp tự động lấy mẫu Lớp khác (Others) từ Dynamic World.
-* **Xây dựng & Đánh giá mô hình**: Thiết lập bộ phân loại Random Forest (200 cây quyết định) trên GEE, đánh giá hiệu năng phân tách vật thể qua Ma trận nhầm lẫn (Confusion Matrix), OA và Kappa.
-* **Quy trình hậu xử lý toán tử không gian**: Phát triển chuỗi thuật toán lọc nhiễu không gian, lọc mảng nước vụn, vector hóa và trích xuất đường bờ sông Hồng sắc nét.
+Để theo dõi biến động đường bờ Sông Hồng theo chuỗi thời gian, dự án thống nhất đóng băng (freeze) quy trình trích xuất đường bờ dựa trên **ranh giới hình học tiếp xúc trực tiếp giữa lớp Nước (Water) và Cát (Sand)**. Phương pháp này loại bỏ hoàn toàn các thuật toán phát hiện biên dạng pixel cục bộ để tập trung vào mối quan hệ topo không gian thực sự giữa dòng chảy chính và bãi bồi cát.
 
----
+Pipeline này tập trung hoàn toàn vào thuật toán trích xuất đường bờ. Các đánh giá độ chính xác mở rộng, phân tích độ nhạy và tính nhất quán thời gian được trình bày riêng trong phần thực nghiệm của nghiên cứu.
 
-## 2. THIẾT LẬP & TINH LỌC ĐA GIÁC MẪU HUẤN LUYỆN (GROUND TRUTH POLYGONS)
+> [!NOTE]
+> **Lưu ý về Dữ liệu đầu ra**: Quy trình này không yêu cầu xuất ảnh raster dạng GeoTIFF (.tif) ra bên ngoài (Google Drive/Local). Toàn bộ thuật toán xử lý ảnh raster và vector được thực thi lập trình, kết quả đường bờ cuối cùng được kiểm chứng và trực quan hóa trực tiếp dưới dạng bản đồ tương tác HTML (Folium).
 
-Mẫu huấn luyện đại diện đóng vai trò quyết định đến chất lượng phân loại của mô hình học máy. Một mạng lưới đa giác mẫu đã được xây dựng và tối ưu hóa qua nhiều chu kỳ lặp:
-
-### 2.1 Đặc điểm hình học & Nguyên tắc thiết lập
-* **Kiểu đa giác**: Sử dụng các đa giác hình chữ nhật xoay (Rotated Rectangles) định hướng theo hướng dòng chảy của sông (góc xoay thay đổi từ $5^\circ$ ở thượng lưu đến $-65^\circ$ ở hạ lưu) để khớp tối đa với các doi cát và luồng lạch tự nhiên.
-* **Kích thước chuẩn**:
-  * Đa giác Nước: Thường có kích thước $130\text{ m} \times 80\text{ m}$.
-  * Đa giác Bãi cát: Kích thước $110\text{ m} \times 70\text{ m}$.
-  * Đa giác Lớp khác (khu vực cầu, đê điều): Kích thước tùy biến để ôm khít vật thể địa hình thực tế.
-* **Tổng số lượng**: **99 đa giác mẫu thủ công** (lưu trữ trong tệp tin [training_polygons.geojson](file:///d:/Future%20Career/SongHong-SAR-Monitoring/aoi/training_polygons.geojson)).
-
-### 2.2 Các điều chỉnh nâng cao (Fine-tuning)
-* **Loại bỏ đa giác nhiễu**: Loại bỏ các mẫu cũ bị chồng lấn ranh giới hoặc nằm ở vùng địa vật không ổn định như `others_21`, `sandbar_21`, `others_29`, `sandbar_30` và `sandbar_custom_6`.
-* **Xử lý khu vực cầu (Bridge Artifacts)**: Bổ sung đa giác lớp khác (`others_custom_4`, `others_custom_5`) trực tiếp tại các tọa độ chân cầu chính bắc qua sông Hồng nhằm triệt tiêu hiện tượng tán xạ ngược mạnh của kết cấu thép/bê tông bị mô hình nhận nhầm là bãi cát.
-* **Tích hợp ứng viên tự động (Candidates Conversion)**: Trích xuất các điểm ứng viên chất lượng cao từ tệp phân tích tự động `candidates.geojson` (dựa trên bộ lọc ngưỡng SAR) để chuyển đổi thành mẫu bãi cát huấn luyện bổ sung (ví dụ: các ứng viên mã số `231`, `259`, `317`, `656`).
-
----
-
-## 3. HUẤN LUYỆN MÔ HÌNH RANDOM FOREST & ĐÁNH GIÁ ĐỘ CHÍNH XÁC (2024)
-
-Mô hình học máy Random Forest với số lượng cây quyết định $N = 200$ được chạy độc lập cho hai mùa ảnh composite (Mùa khô và Mùa mưa năm 2024). Bộ dữ liệu huấn luyện được phân tách ngẫu nhiên theo tỷ lệ **70% huấn luyện / 30% kiểm chứng**.
-
-### 3.1 Kết quả hiệu năng phân loại
-
-| Chỉ số đánh giá | Mùa khô 2024 (Dry Composite) | Mùa mưa 2024 (Wet Composite) |
-| :--- | :---: | :---: |
-| **Kích thước tập huấn luyện** | 6,841 pixels | 6,866 pixels |
-| **Kích thước tập kiểm chứng** | 2,941 pixels | 2,938 pixels |
-| **Độ chính xác toàn cục (Overall Accuracy)** | **94.53%** | **94.15%** |
-| **Hệ số tương quan Kappa** | **0.9159** | **0.9106** |
-
-#### Ma trận nhầm lẫn tập kiểm chứng (Mùa khô 2024):
-```
-             Dự báo (Classified)
-             Water (0)   Sandbar (1)   Others (2)
-Thực tế 0:      981          25            8
-Thực tế 1:       21         631           52
-Thực tế 2:        9          46         1168
-```
-
-#### Độ chính xác theo lớp phủ (Mùa khô vs Mùa mưa):
-* **Lớp Nước (Water)**:
-  * Mùa khô: Độ nhạy (Recall) **96.75%** | Độ chính xác (Precision) **97.03%**
-  * Mùa mưa: Độ nhạy (Recall) **96.51%** | Độ chính xác (Precision) **97.45%**
-* **Lớp Bãi cát (Sandbar)**:
-  * Mùa khô: Độ nhạy (Recall) **89.63%** | Độ chính xác (Precision) **89.89%**
-  * Mùa mưa: Độ nhạy (Recall) **90.56%** | Độ chính xác (Precision) **87.99%**
-* **Lớp Khác (Others)**:
-  * Mùa khô: Độ nhạy (Recall) **95.50%** | Độ chính xác (Precision) **95.11%**
-  * Mùa mưa: Độ nhạy (Recall) **94.27%** | Độ chính xác (Precision) **95.15%**
-
-> [!TIP]
-> Nhờ việc bổ sung các đa giác bãi cát tại vị trí có backscatter thấp cận biên nước, độ nhạy lớp bãi cát (Sandbar Recall) đã tăng ổn định vượt ngưỡng **90%** trong mùa mưa, giúp giảm thiểu hiện tượng bỏ sót các doi cát chìm bán ngập.
-
-### 3.2 Tầm quan trọng của các đặc trưng (Feature Importance)
-Góc tới của chùm tia Radar (Incidence Angle) được ghi nhận là đặc trưng đóng góp lớn nhất vào sự phân tách các nhánh quyết định, theo sau là phân cực chéo VH và các kênh biến đổi:
-
-| Tên đặc trưng | Trọng số Mùa khô (Dry) | Trọng số Mùa mưa (Wet) |
-| :--- | :---: | :---: |
-| **angle** (Góc tới) | **30.35%** | **31.43%** |
-| **VH** (Tán xạ chéo) | 18.04% | 17.92% |
-| **VV_VH_ratio** (Tỷ số phân cực) | 17.24% | 16.70% |
-| **VV** (Tán xạ đồng cực) | 17.21% | 17.35% |
-| **VV_VH_diff** (Hiệu số phân cực) | 17.16% | 16.61% |
-
----
-
-## 4. CHUỖI XỬ LÝ HẬU KỲ NÂNG CAO (POST-PROCESSING PIPELINE)
-
-Ảnh phân loại pixel-level từ mô hình Random Forest thường chứa các sai số không gian nhỏ lẻ (nhiễu "muối tiêu") do hiện tượng suy hao tín hiệu cục bộ hoặc bóng sóng nước. Để trích xuất được dòng chảy sạch và đường bờ liên tục, dự án đã xây dựng một chuỗi xử lý hậu kỳ tự động trên GEE:
-
-```mermaid
-graph TD
-    A[Ảnh Phân Loại Gốc] --> B[Bộ Lọc Đa Số - Majority Filter 20m]
-    B --> C[Mặt nạ Nước Nhị Phân]
-    C --> D[Morphological Opening - Co rồi Giãn 20m]
-    D --> E[Connected Components - Tính Liên Kết Không Gian]
-    E --> F[Loại bỏ mảng nhỏ - Remove Patches < 0.5 ha]
-    F --> G[Mặt nạ Nước Sạch - Cleaned Water Mask]
-    G --> H[Đa giác hóa - reduceToVectors]
-    H --> I[Đường Bờ Vector - Shoreline Outline]
+```text
+       Sentinel-1 GRD (VV + VH)
+                  │
+                  ▼
+         SAR Preprocessing
+                  │
+                  ▼
+         Feature Engineering (GLCM + Polarizations)
+                  │
+                  ▼
+         Random Forest Classification (Calibrated on 2024 Composites)
+                  │
+                  ▼
+       Classification Refinement (Morphological Disk Filters)
+                  │
+                  ▼
+     Water–Sand Shared Boundary Extraction (Main Corridor Only)
+                  │
+                  ▼
+         Shoreline Graph Cleaning (Empirically Calibrated)
+                  │
+                  ▼
+         Chaikin Smoothing (Vertex Density Interpolation)
+                  │
+                  ▼
+       Douglas–Peucker Simplification (Redundant Vertex Reduction)
+                  │
+                  ▼
+       Final Quality Control and Shoreline Validation
+                  │
+                  ▼
+           Final Shoreline
 ```
 
-### 4.1 Chi tiết thuật toán toán tử không gian
-1. **Majority Filter (Lọc đa số)**: Sử dụng toán tử lọc Mode không gian bán kính 20m dạng hình tròn để đồng nhất hóa các cụm pixel đơn lẻ:
-   $$Image_{\text{smoothed}} = \text{Mode}_{20\text{m}}(Image_{\text{raw}})$$
-2. **Morphological Opening (Mở hình học)**: Thực hiện phép Co (`focalMin`) bán kính 20m rồi Giãn (`focalMax`) bán kính 20m trên mặt nạ nước nhị phân. Bước này giúp cắt đứt các vệt nối giả và lấp đầy các lỗ trống địa lý nhỏ:
-   $$\text{Mask}_{\text{opened}} = \text{Dilation}_{20\text{m}}(\text{Erosion}_{20\text{m}}(\text{Mask}_{\text{binary}}))$$
-3. **Connected Components & Remove Small Patches**: Đếm số pixel liên hợp của từng khối nước biệt lập. Các khối có kích thước dưới **50 pixel (tương đương 0.5 ha)** sẽ bị lọc bỏ nhằm loại trừ các ao cá nuôi trong đê hoặc vệt nước đọng tạm thời trên ruộng lúa ven sông.
+---
+
+## CHI TIẾT CÁC PHASE & SUB-PHASES
+
+### PHASE 1: SAR DATA PREPARATION
+Mục tiêu là tạo ra ảnh phân cực chuẩn hóa, triệt tiêu nhiễu địa hình và nhiễu đốm để thu được giá trị tán xạ ngược ($VV$ và $VH$) trung thực.
+
+* **Sub-phase 1.1: Metadata & Orbit Calibration**
+  * Áp dụng quỹ đạo chính xác (Apply Orbit File) để cập nhật thông tin vị trí vệ tinh.
+* **Sub-phase 1.2: Noise Suppression**
+  * **Thermal Noise Removal**: Loại bỏ nhiễu nhiệt giữa các dải quét (sub-swaths).
+  * **Border Noise Removal**: Loại bỏ các pixel viền ảnh bị lỗi năng lượng thấp.
+* **Sub-phase 1.3: Radiometric & Geometric Correction**
+  * **Radiometric Calibration**: Chuyển đổi giá trị số (DN) sang hệ số tán xạ vật lý $\sigma^0$ (Sigma0) hoặc $\gamma^0$ (Gamma0).
+  * **Terrain Correction (RDTC)**: Sử dụng mô hình độ cao số (DEM) để hiệu chỉnh biến dạng địa hình do góc nghiêng radar.
+* **Sub-phase 1.4: Decibel Conversion & Adaptive Filtering**
+  * Chuyển đổi giá trị tuyến tính sang logarit (dB scale):
+    $$dB = 10 \log_{10}(Power)$$
+  * Áp dụng bộ lọc thích ứng hướng **Refined Lee Filter (7×7)** để giảm nhiễu đốm (speckle) mà không làm mờ biên cạnh bãi cát và bờ sông.
+
+> [!NOTE]
+> **CHECKPOINT PHASE 1: KIỂM TRA CHẤT LƯỢNG TIỀN XỬ LÝ**
+> * **Chỉ số đo lường (Metric)**: Tán xạ ngược tại vùng nước sâu ổn định $VV \le -15\text{ dB}$, $VH \le -22\text{ dB}$.
+> * **Kiểm tra trực quan (Visual)**: Biên bờ sông sắc nét, không bị nhòe (no blur). Nhiễu đốm hạt muối tiêu giảm rõ rệt so với ảnh gốc. Nếu có vệt mờ biên, kiểm tra lại bộ lọc Lee.
 
 ---
 
-## 5. TRỰC QUAN HÓA BẢN ĐỒ FOLIUM & TRÍCH XUẤT ĐƯỜNG BỜ VECTOR
+### PHASE 2: FEATURE ENGINEERING
+Xây dựng một bộ đặc trưng không gian và phân cực phong phú (Feature Stack) khoảng 10-12 kênh để tăng tối đa độ phân tách giữa các lớp phủ.
 
-Đường bờ sông Hồng đoạn qua Hà Nội được xác định chính xác bằng cách chuyển đổi mặt nạ nước nhị phân sạch sau hậu xử lý thành dạng **đa giác vector** (`reduceToVectors` ở độ phân giải 10m).
+* **Sub-phase 2.1: Derived Polarizations**
+  * Sử dụng các kênh phân cực gốc: $VV$, $VH$.
+  * Tích hợp tỷ số phân cực (tương đương phép chia tuyến tính $VV/VH$ trong miền log):
+    $$\text{Ratio} = VV_{\text{dB}} - VH_{\text{dB}}$$
+  * Tính toán các đặc trưng số học:
+    * Tổng tuyến tính chuyển dB: $VV + VH$
+    * Giá trị trung bình: $\text{Mean}(VV, VH)$
+* **Sub-phase 2.2: GLCM Texture Analysis**
+  * Tính ma trận đồng xuất hiện mức xám (Gray-Level Co-occurrence Matrix) trên cửa sổ trượt $5\times5$ hoặc $7\times7$ pixel để nắm bắt cấu trúc bề mặt nhám của bãi bồi cát và thực vật:
+    * **Contrast**: Độ tương phản nhám.
+    * **Entropy**: Độ hỗn loạn thông tin.
+    * **Homogeneity**: Độ đồng nhất bề mặt.
+    * **Correlation**: Độ tương quan không gian.
+    * **ASM (Angular Second Moment)**: Thể hiện độ đồng dạng.
+    * **Variance**: Phương sai cục bộ.
 
-### 5.1 Hiển thị Đường bờ Vector
-* Biên ngoài (boundaries) của các đa giác nước sau khi vector hóa được chiết xuất và chồng xếp lên bản đồ dưới dạng **lớp vẽ Vector (GeoJSON)**.
-* **Định dạng hiển thị**: Nét vẽ màu hồng sen neon (`#ff0055`), độ dày nét `weight = 3.0` và độ mờ nền tô `fillOpacity = 0.0`. Lớp đường bờ này chạy khít dọc theo rìa bãi cát và bờ đất của sông Hồng.
-* Người dùng có thể bật/tắt độc lập các lớp sau trên giao diện bản đồ Folium:
-  1. `Raw RF Classification`: Ảnh phân loại pixel gốc (Chưa qua lọc).
-  2. `RF Classification (Majority Filtered)`: Ảnh phân loại đã lọc mịn.
-  3. `Cleaned Water Mask`: Khối mặt nước sông chính sau xử lý mở rộng và lọc mảng nhỏ.
-  4. `Shoreline / Đường bờ (Vector)`: Đường bao bờ sông dạng vector sắc nét.
-  5. `Training Polygons (Water/Sandbar)`: Các vùng đa giác mẫu thực tế dùng huấn luyện.
+> [!NOTE]
+> **CHECKPOINT PHASE 2: KIỂM TRA ĐẶC TRƯNG ĐẦU VÀO**
+> * **Chỉ số đo lường (Metric)**: Kiểm tra giá trị vô cực (Inf) hoặc rỗng (NaN) trên toàn bộ kênh ảnh đặc trưng. Đảm bảo tỷ lệ vô trị là 0%.
+> * **Kiểm tra trực quan (Visual)**: Kênh GLCM Contrast làm nổi bật biên giới đất/nước và bãi bồi. Kênh Ratio và Difference phân cực phân tách rõ ranh giới cát ẩm và nước chảy.
 
 ---
 
-## 6. KẾT LUẬN & ĐỊNH HƯỚNG TIẾP THEO
+### PHASE 3: RANDOM FOREST CLASSIFICATION
+Thực hiện phân loại ảnh đa kênh thành các lớp phủ mục tiêu bằng thuật toán Học máy Random Forest.
 
-* **Kết quả**: Quy trình bán tự động kết hợp Random Forest và lọc không gian toán tử đã giải quyết triệt để vấn đề nhiễu SAR, xây dựng được đường bờ sông Hồng với độ chính xác cao (>94%).
-* **Định hướng Phase 4**: 
-  1. Áp dụng mô hình đã huấn luyện lên chuỗi ảnh composite nhiều năm từ 2017 đến 2025.
-  2. Đo đạc biến động diện tích bãi bồi cát và tốc độ xói lở/bồi tụ của đường bờ sông Hồng theo năm.
-  3. Đối chiếu kết quả biến động diện tích mặt nước với số liệu mực nước/lưu lượng xả thực tế của các trạm thủy văn (Sơn Tây, Hà Nội) để đánh giá tương quan.
+* **Sub-phase 3.1: Class Definition**
+  Phân loại lớp phủ thành 5 lớp chính:
+  1. **Water (Nước)**: Lòng sông chính, kênh rạch lớn.
+  2. **Sand (Cát)**: Bãi bồi cát nổi giữa sông, bãi cát ven bờ.
+  3. **Vegetation (Thực vật)**: Đất nông nghiệp, cây bụi ven đê.
+  4. **Built-up (Khu dân cư)**: Đô thị, công trình nhân tạo.
+  5. **Others (Lớp phủ khác)**: Đất trống, vùng bóng đồi.
+* **Sub-phase 3.2: Sampling Strategy & Baseline Calibration**
+  * **Thiết lập Baseline năm 2024**: Dữ liệu mẫu huấn luyện và kiểm chứng sẽ ưu tiên thu thập và hiệu chuẩn trên các ảnh composite mùa khô (dry) và mùa lũ (wet) của năm 2024 trước để thiết lập baseline mô hình tối ưu trước khi mở rộng ra chuỗi thời gian 10 năm.
+  * **Stratified Sampling**: Lấy mẫu phân tầng để bảo đảm đại diện đầy đủ các lớp phủ.
+  * **Balanced Samples**: Cân bằng số lượng điểm mẫu giữa các lớp để tránh lệch mô hình (bias).
+  * **Train/Test Split**: Chia bộ mẫu thành 70% huấn luyện và 30% kiểm chứng độc lập.
+
+> [!NOTE]
+> **CHECKPOINT PHASE 3: ĐÁNH GIÁ ĐỘ CHÍNH XÁC PHÂN LOẠI**
+> * **Chỉ số đo lường (Metric)**: Báo cáo đầy đủ Precision, Recall, F1-score cho từng lớp phủ thay vì chỉ dùng Overall Accuracy (OA) và Kappa (do các lớp dễ như Water/Vegetation dễ làm sai lệch OA). Đặc biệt chú trọng lớp **Sand** (mục tiêu F1-score cho Sand $\ge 75\%$, hiệu chuẩn thực nghiệm).
+> * **Kiểm tra trực quan (Visual)**: Ma trận nhầm lẫn (Confusion Matrix) không bị nhầm lẫn nghiêm trọng giữa lớp Cát (Sand) và các công trình đô thị (Built-up) hoặc đất trống khô (Others).
+
+---
+
+### PHASE 4: CLASSIFICATION REFINEMENT
+Hậu xử lý kết quả phân loại dạng raster để thu được các vùng mặt nước và bãi cát sạch sẽ, liền mạch.
+
+* **Sub-phase 4.1: Pixel-level Cleaning**
+  * Áp dụng **Majority Filter** để loại bỏ các pixel phân loại sai lệch đơn lẻ (nhiễu muối tiêu).
+* **Sub-phase 4.2: Morphological Filtering**
+  * Áp dụng các bộ lọc hình thái toán học sử dụng **phần tử cấu trúc hình đĩa (disk)** để đảm bảo tính đẳng hướng không gian, tránh gây méo lệch hướng biên:
+    * **Morphological Opening (Bán kính đĩa = 2 pixels / 20m)**: Phá vỡ các cầu nối mỏng nhân tạo, lọc sạch nhiễu hạt cát/nước nhỏ cô lập.
+    * **Morphological Closing (Bán kính đĩa = 3 pixels / 30m)**: Lấp đầy các lỗ rỗng, khe nứt nhỏ trong lòng bãi cát và các vùng nước lớn.
+* **Sub-phase 4.3: Connected Component & Corridor Extraction**
+  * **Keep Main River Corridor**: Xác định rõ tiêu chí giữ lại hành lang sông chính:
+    * Thực hiện phân tích thành phần liên thông để xác định thành phần liên thông đại diện cho hành lang sông Hồng đang hoạt động (active Red River corridor) dựa trên tính liên thông và các ràng buộc không gian.
+    * Giữ lại các thành phần phụ nếu chúng nằm trong khoảng cách giới hạn (ví dụ: 500m) so với đường tâm sông (centerline) đã số hóa để tránh bỏ sót các nhánh nhỏ quan trọng.
+    * Loại bỏ hoàn toàn các vùng nước độc lập (ao hồ nội đồng ngoài đê, ao nuôi trồng thủy sản) không thuộc hệ thống thủy văn sông chính.
+
+> [!NOTE]
+> **CHECKPOINT PHASE 4: KIỂM TRA MẶT NẠ SẠCH**
+> * **Chỉ số đo lường (Metric)**: Tổng số thành phần liên thông độc lập của lớp mặt nước (Water Component Count) giảm $\ge 95\%$ so với trước khi lọc.
+> * **Kiểm tra trực quan (Visual)**: Không còn các đốm cát li ti trong lòng sông chính, các hồ nước nội đồng nằm ngoài đê sông Hồng bị loại bỏ hoàn toàn.
+
+---
+
+### PHASE 5: WATER–SAND SHARED BOUNDARY EXTRACTION
+Trích xuất đường bờ sông thực tế dựa trên ranh giới tiếp xúc trực tiếp giữa nước và cát của dòng chính.
+
+* **Sub-phase 5.1: Polygonization**
+  * Chuyển đổi các vùng raster đã lọc sạch của lớp **Water** (hành lang sông chính) và lớp **Sand** thành các đa giác Vector (Polygons).
+* **Sub-phase 5.2: Shared Boundary Extraction (Trích xuất ranh giới chung dòng chính)**
+  * Tính ranh giới chung giữa đa giác nước dòng chính sông Hồng và đa giác cát bãi bồi:
+    $$\text{Shoreline} = \partial(\text{Main\_River\_Water\_Polygon}) \cap \partial(\text{Sand\_Polygon})$$
+  * Giải pháp này chỉ trích xuất ranh giới trực tiếp nơi dòng chảy sông Hồng tiếp giáp với bãi cát. Nó chủ động loại bỏ các biên dạng khép kín của đảo (island boundaries), biên của các lỗ rỗng/hồ nước trên bãi cát (lake boundaries / polygon rings) và ranh giới đập bê tông/thực vật không chứa cát.
+
+> [!NOTE]
+> **CHECKPOINT PHASE 5: KIỂM TRA RANH GIỚI TIẾP XÚC**
+> * **Chỉ số đo lường (Metric)**: Không tồn tại các đường bờ khép kín (closed loops) quanh các đảo không chứa cát hoặc các vùng đô thị ven sông.
+> * **Kiểm tra trực quan (Visual)**: Đường bờ chỉ xuất hiện tại các khu vực bãi cát ven bờ và doi cát nổi giữa sông Hồng. Các rìa đê bờ đông/tây đô thị không có bãi cát sẽ không sinh ra shoreline giả.
+
+---
+
+### PHASE 6: SHORELINE CLEANING
+Xử lý các lỗi hình học tô-pô trên các đường bờ dạng polyline thu được.
+
+* **Sub-phase 6.1: Graph Construction**
+  * Chuyển đổi tập hợp các đường ranh giới vector thành cấu trúc đồ thị (Graph Nodes & Edges).
+* **Sub-phase 6.2: Spurious Segment Removal**
+  * Xóa các nhánh cụt ngắn (dead-end spurs) và xóa các vòng khép kín nhỏ (loop pruning) hình thành quanh các vũng nước nhỏ trên bãi cát.
+* **Sub-phase 6.3: Network Assembly & Snapping**
+  * **Keep Longest Connected Network**: Giữ lại các chuỗi đường bờ dài liên kết chặt chẽ.
+  * **Snap Vertices**: Ghép nối các đầu mút đường bờ bị đứt đoạn trong khoảng cách ngắn để tạo tính liên tục cho dòng chảy.
+
+> [!NOTE]
+> **CHECKPOINT PHASE 6: KIỂM TRA ĐỒ THỊ TOPOLOGY**
+> * **Chỉ số đo lường (Metric)**: Thay vì chọn các con số cố định một cách tùy ý (ví dụ: cụt $< 500\text{ m}$ hoặc snap $< 150\text{ m}$), **các tham số này phải được xác định qua hiệu chuẩn thực nghiệm dựa trên các đoạn sông kiểm chứng (validation reaches) hoặc tối ưu hóa qua phân tích độ nhạy (grid search)**.
+> * **Kiểm tra trực quan (Visual)**: Các nhánh đứt khúc nhỏ ven bờ bị triệt tiêu, các mút đứt gãy do bóng mây hoặc chân cầu được kết nối liền mạch.
+
+---
+
+### PHASE 7: SHORELINE SMOOTHING & SIMPLIFICATION
+Làm mịn đường bờ để đạt tiêu chuẩn trực quan hóa bản đồ và xuất bản nghiên cứu.
+
+* **Sub-phase 7.1: Thứ tự làm mịn (Smoothing Order Rationale)**
+  * Thực hiện **Chaikin Smoothing** (2-3 vòng lặp cắt góc để bo tròn các nốt gãy góc $90^\circ$ do lưới pixel raster tạo ra) **TRƯỚC KHI** áp dụng **Douglas-Peucker Simplification**.
+  * *Lý do*: Chaikin làm tăng số lượng đỉnh (vertices) bằng cách nội suy mịn tạo đường cong tự nhiên từ các pixel răng cưa ban đầu. Douglas-Peucker (DP) sau đó được sử dụng để giảm số lượng đỉnh bằng cách loại bỏ các đỉnh thừa thẳng hàng. Trình tự này bảo đảm đường bờ có dạng hình học trơn mượt vật lý và tối ưu hóa dung lượng lưu trữ vector mà không làm mất cấu trúc topo gốc.
+* **Sub-phase 7.2: Douglas-Peucker Simplification**
+  * Áp dụng thuật toán đơn giản hóa hình học **Douglas-Peucker** với ngưỡng dung sai nhỏ (Tolerance $2-5\text{ m}$) để giảm số lượng đỉnh dư thừa.
+
+> [!NOTE]
+> **CHECKPOINT PHASE 7: KIỂM TRA ĐỘ MƯỢT VÀ SAI LỆCH HÌNH HỌC**
+> * **Chỉ số đo lường (Metric)**: Số lượng đỉnh (vertices) giảm $\ge 60\%$. Khoảng cách lệch Hausdorff cực đại giữa đường bờ gốc và đường bờ làm mịn xấp xỉ một pixel ($\approx 10\text{ m}$).
+> * **Kiểm tra trực quan (Visual)**: Đường bờ mềm mại, tự nhiên, không còn răng cưa pixel.
+
+---
+
+### PHASE 8: FINAL QUALITY CONTROL AND SHORELINE VALIDATION
+Quy trình kiểm chứng cuối cùng để xác nhận đường bờ đã đạt chất lượng nghiên cứu cao nhất trước khi xuất kết quả.
+
+* **Sub-phase 8.1: Visual Overlay Check**
+  * Chồng xếp đường bờ trích xuất lên ảnh quang học Sentinel-2 sạch mây (True Color/False Color) chụp cùng thời kỳ để kiểm tra mức độ trùng khớp tại các vùng nhạy cảm.
+* **Sub-phase 8.2: Shoreline Positional Accuracy (Đo đạc sai số vị trí đường bờ)**
+  * Sử dụng các chỉ số hình học chuyên dụng để đánh giá sai số vị trí đường bờ so với dữ liệu kiểm chứng thực địa hoặc ảnh quang học độ phân giải cao:
+    * **Mean Distance (Khoảng cách trung bình)**: Sai lệch khoảng cách trung bình giữa hai đường bờ.
+    * **RMSE (Sai số trung bình bình phương)**: Thể hiện mức độ biến động sai lệch vị trí đường bờ.
+    * **Hausdorff Distance**: Khoảng cách lệch cục bộ lớn nhất giữa đường bờ trích xuất và tham chiếu.
+    * **95th Percentile Distance**: Khoảng cách sai lệch tại phân vị thứ 95 để loại trừ nhiễu biên cực đoan.
+* **Sub-phase 8.3: Quy trình Manual QC (Quy trình kiểm chứng thủ công)**
+  * Sử dụng công cụ bản đồ tương tác (Folium/Leaflet) chồng xếp ảnh nền SAR VV, Classification Raster (có opacity slider), đường bờ thô (màu đỏ đứt nét) và đường bờ mịn (xanh lục).
+  * Chuyên gia rà quét từ Sơn Tây đến Phú Xuyên ở zoom 14–16. Phát hiện các điểm nóng lỗi (như chân cầu, doi cát ngầm mùa mưa có tán xạ yếu).
+  * Nếu sai lệch vượt quá $30\text{ m}$, ghi nhận tọa độ, điều chỉnh tham số lọc topo hoặc bổ sung mẫu huấn luyện tại vùng lỗi để retrain mô hình.
+
+---
+
+## ĐỀ XUẤT CẤU TRÚC LUẬN VĂN/PAPER: CHƯƠNG 4 – ĐÁNH GIÁ THỰC NGHIỆM (EXPERIMENTAL EVALUATION)
+
+Để bảo đảm tính rõ ràng và mạch lạc của bài báo, các phân tích thống kê và đánh giá hiệu năng thuật toán sẽ được trình bày riêng biệt tại Chương thực nghiệm (Experiments/Results):
+
+### 4.1 Classification Accuracy (Độ chính xác phân loại & Độ không chắc chắn)
+* Trình bày kết quả kiểm chứng chéo 5-fold (5-fold CV) trên tập mẫu huấn luyện Random Forest.
+* Báo cáo giá trị trung bình (Mean) và độ lệch chuẩn (Std) của Overall Accuracy, Precision, Recall, và F1-score (đặc biệt cho lớp Sand) chạy qua 10 hạt ngẫu nhiên (random seeds) khác nhau nhằm chứng minh tính ổn định của mô hình.
+
+### 4.2 Shoreline Positional Accuracy (Độ chính xác vị trí đường bờ)
+* Báo cáo chi tiết các chỉ số hình học: Mean Distance, RMSE, Hausdorff Distance, và 95th Percentile của đường bờ cuối cùng so với các đoạn sông tham chiếu để chứng thực sai số vật lý.
+
+### 4.3 Parameter Sensitivity (Phân tích độ nhạy tham số)
+* Đánh giá độ ảnh hưởng của các tham số chính đến sai số RMSE đường bờ cuối cùng:
+  * Kích thước cửa sổ lọc Lee (5×5, 7×7, 9×9)
+  * Cửa sổ tính GLCM (3×3, 5×5, 7×7)
+  * Khoảng cách snap dọn dẹp đồ thị shoreline (50m, 100m, 150m)
+  * Bán kính đĩa lọc hình thái opening và closing (ví dụ: 1–4 pixels)
+* Chứng minh việc lựa chọn tham số tối ưu thông qua tìm kiếm lưới (grid search).
+
+### 4.4 Ablation Study (Đánh giá hiệu quả từng bước xử lý)
+* Phân tích vai trò và đóng góp định lượng của từng module hậu xử lý (Lọc hình thái Morphological, Connected Component dòng chảy chính, dọn dẹp đồ thị đường bờ) trong việc giảm thiểu sai số hình học và topology.
+
+### 4.5 Multi-temporal Shoreline Analysis (Phân tích biến động đa thời gian)
+* Áp dụng thuật toán trích xuất đường bờ cho chuỗi thời gian nhiều năm (2020, 2021, 2022, 2023, 2024) và phân tích biến động lòng sông/bãi bồi giữa mùa khô (Dry composites) và mùa lũ (Wet composites).
+* Liên hệ kết quả với mực nước và lưu lượng từ trạm đo thủy văn để chứng thực quy luật thủy văn tự nhiên.
+
+---
+
+## KẾ HOẠCH TRIỂN KHAI MÃ NGUỒN
+
+Khi bắt đầu triển khai Phase 3, chúng ta sẽ xây dựng các mô-đun mã nguồn sạch theo cấu trúc:
+1. `src/classification.py`: Thực hiện huấn luyện RF, trích xuất GLCM texture và phân loại ảnh vệ tinh.
+2. `src/shoreline.py`: Thực hiện hậu xử lý hình thái raster, trích xuất đường ranh giới chung và tối ưu đồ thị topo.
+3. `scripts/train_classifier.py`: Script điều phối chạy mô hình huấn luyện trên GEE.
+4. `scripts/extract_research_shoreline.py`: Script chạy quy trình trích xuất đường bờ nghiên cứu và so sánh biến động.
