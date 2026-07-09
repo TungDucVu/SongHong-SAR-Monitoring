@@ -41,10 +41,9 @@ CLASSIFIER_FEATURES = [
 ]
 CLASS_LABELS = {
     1: 'Water',
-    2: 'Wet Sand',
-    3: 'Dry Sand',
-    4: 'Built-up',
-    5: 'Others'
+    2: 'Sand',
+    3: 'Built-up',
+    4: 'Others'
 }
 
 
@@ -143,9 +142,9 @@ SHORELINE_MIN_BRANCH_LENGTH = 100.0
 SHORELINE_GEE_WATER_CLASSES = [1]
 SHORELINE_GEE_SAND_CLASSES = [2, 3]
 
-# For user's 4-class schema: Water=0, Sand=[1]
-SHORELINE_USER_WATER_CLASSES = [0]
-SHORELINE_USER_SAND_CLASSES = [1]
+# For user's 4-class schema: Water=1, Sand=[2]
+SHORELINE_USER_WATER_CLASSES = [1]
+SHORELINE_USER_SAND_CLASSES = [2]
 
 # New Publication-Quality Shoreline Refinement Parameters
 # Orientation cosine threshold (cos theta >= 0.5 -> angle <= 60 deg with flow)

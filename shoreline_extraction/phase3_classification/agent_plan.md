@@ -17,7 +17,9 @@ Train a Random Forest classifier using GEE and classify the 10–12 band feature
   * 2024 Dry and Wet season composites (for baseline calibration).
 * **Output**: 
   * Classified raster GEE Image with values `[1, 2, 3, 4, 5]`.
-  * Classification assessment metrics (Precision, Recall, F1-score per class, with focus on Sand).
+  * Maximum class probability map (values `[0.0 - 1.0]`, representing classifier confidence/probability of the winning class).
+  * Classification assessment metrics (Precision, Recall, F1-score per class, full Confusion Matrix).
+  * Feature Importance ranking (numerical scores for all bands).
 
 ---
 
@@ -41,36 +43,50 @@ Train a Random Forest classifier using GEE and classify the 10–12 band feature
   * Split training samples into 70% for model training and 30% for independent testing.
   * Split should be done at the polygon/group level (spatial block split) where possible to avoid spatial autocorrelation biasing the test scores.
 
-### 3.4 Model Training
-* Train `ee.Classifier.smileRandomForest` with parameter:
-  * `numberOfTrees`: 200 (defined as `RF_NUM_TREES` in `src/config.py`).
-  * Feature variables: All bands in the stack.
+### 3.4 Model Training & Tuning
+* **Reproducibility**: Use a set of explicit, predefined random seeds (e.g., `[42, 52, 62, 72, 82]`) to run model training iterations.
+* **Sequential Hyperparameter Tuning**: To avoid computationally expensive full grid searches in GEE, optimize parameters sequentially:
+  * **Stage 1 (Trees)**: Tune `numberOfTrees` over `[100, 200, 300]` (keeping other parameters at GEE defaults). Select the best configuration based on validation F1-score.
+  * **Stage 2 (Split Variables)**: Tune `variablesPerSplit` (e.g., GEE default vs. alternative values) using the best number of trees from Stage 1.
+  * **Stage 3 (Bag Fraction / Leaf Size)**: Tune `bagFraction` (e.g., `[0.5, 0.7, 1.0]`) or `minLeafPopulation` using the settings from Stages 1 and 2.
+* Train the final `ee.Classifier.smileRandomForest` using the sequentially selected optimal hyperparameters.
 
 ---
 
 ## 4. GEE/Python Implementation Details
 
 * Use `image.sampleRegions()` to extract GEE feature tables from training polygons.
-* Save the trained classifier GEE object or model parameters so that it can be applied to other years (2015-2024).
+* **Feature Importance**: Retrieve feature importance rankings using `.explain()` on the trained GEE classifier object. Save these scores (e.g., for VV, VH, VV_ratio, VV_contrast, etc.) as a text report and/or plot to verify feature utility.
+* **Probability Map**: Generate a **Maximum Class Probability Map** (values ranging from 0.0 to 1.0) representing the classifier's confidence/probability for the predicted winning class. This is critical for QC'ing borderline/uncertain areas.
 * Apply classification:
-  `classified = image.select(features).classify(trained_rf)`
+  * Hard labels: `classified = image.select(features).classify(trained_rf)`
+  * Probability/confidence: Generate the maximum probability value across all classes (e.g., by running classification in `'PROBABILITY'` mode or getting class probability list outputs and selecting the max value).
 
 ---
 
 ## 5. Quality Control & Checkpoints
 
 * **Avoid Over-Reliance on OA/Kappa**: Do not rely on Overall Accuracy or Kappa coefficient, as they are skewed by the easily classified classes (Water, Vegetation).
-* **Per-Class Metrics Check**:
-  * Extract the confusion matrix from the 30% test split.
+* **Per-Class Metrics & Confusion Matrix**:
+  * Extract the 5x5 Confusion Matrix from the 30% test split.
   * Calculate **Precision**, **Recall**, and **F1-score** for each class.
-  * **F1-score for Sand Class MUST be $\ge 75\%$**. If it is lower, inspect confusion matrix for mixing (typically between Sand and Built-up or Bare Soil) and add targeted training polygons.
-* **Visual Inspection**: Ensure bridge structures (built-up) are not misclassified as sand, and sandbars are not completely missed.
+  * **No Hard F1 Threshold**: Do not abort/stop the pipeline based on an arbitrary F1 score threshold (e.g., Sand F1 $\ge 75\%$). F1 values are highly dependent on seasonal features, polygon selection, and model tuning.
+  * **Error Analysis**: If performance for Sand or any other class is low, inspect the saved Confusion Matrix to identify which classes are being confused (e.g., Sand mixed with Built-up or Bare Soil). Use this insight to adjust feature bands or add targeted training polygons, but continue running the pipeline.
+* **Visual Inspection**: Ensure bridge structures (built-up) are not misclassified as sand, and sandbars are not completely missed. Check the classification probability map to identify areas of low certainty.
+* **Post-Classification QC & Area Statistics Sanity Check**:
+  * Calculate the percentage of the total AOI area occupied by each of the 5 classes:
+    * **Water** (Expected baseline: ~32%)
+    * **Sand** (Expected baseline: ~11%)
+    * **Vegetation**
+    * **Built-up** (Expected baseline: ~14%)
+    * **Others**
+  * If the classified area statistics differ dramatically from realistic baselines (e.g., Sand class exceeds 40-45% of the total AOI), this flags an obvious classification failure. Log this anomaly clearly in the pipeline run output so that the user is alerted to inspect the training polygons or feature stacks.
 
 ---
 
 ## 6. Definition of Done (DoD)
 
-- [ ] **All functions implemented**: Random forest training, feature sampling, and image classification are fully written.
+- [ ] **All functions implemented**: Random forest training, sequential hyperparameter tuning, feature sampling, feature importance extraction, and image classification/maximum probability mapping are fully written.
 - [ ] **No runtime errors**: Scripts run and complete without GEE query execution errors.
 - [ ] **HTML generated**: Standalone HTML map sheet showing the classification raster overlay is generated, containing:
   * LayerControl
@@ -78,7 +94,9 @@ Train a Random Forest classifier using GEE and classify the 10–12 band feature
   * Scale Bar
   * North Arrow
   * Coordinate popup
-- [ ] **Checkpoint PASS**: Test split evaluation calculates precision, recall, and F1-score for each class. F1-score for Sand is $\ge 75\%$.
-- [ ] **Checkpoint Failure Policy Applied**: If the F1-score for Sand is below $75\%$, execution stops immediately and writes a failure log.
-- [ ] **Report & Logs written**: Accuracy metrics (Mean & Std over 10 seeds / 5-fold CV) and parameters (trees, bands used) are saved to log files.
-- [ ] **Ready for next phase**: Classified image is ready as a GEE `ee.Image` or local NumPy array.
+- [ ] **Report & Logs written**: 
+  * Accuracy metrics (Precision, Recall, F1 per class, and the full 5x5 Confusion Matrix) saved to files.
+  * Feature Importance scores saved as a ranking table.
+  * Optimal hyperparameters and random seeds logged.
+  * Area statistics (percentage coverage per class) computed and logged.
+- [ ] **Ready for next phase**: Classified image and maximum class probability map are ready as GEE `ee.Image` objects or local datasets.
