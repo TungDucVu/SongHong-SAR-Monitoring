@@ -29,6 +29,7 @@ WET_SEASON_MONTHS = [5, 6, 7, 8, 9, 10]
 PROJECT_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
 AOI_GEOJSON_PATH = os.path.join(PROJECT_ROOT, 'aoi', 'song_hong_aoi.geojson')
 TRAINING_POLYGONS_PATH = os.path.join(PROJECT_ROOT, 'aoi', 'training_polygons.geojson')
+CENTERLINE_GEOJSON_PATH = os.path.join(PROJECT_ROOT, 'aoi', 'song_hong_centerline.geojson')
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'outputs')
 METADATA_JSON_PATH = os.path.join(OUTPUT_DIR, 's1_dataset_metadata.json')
 
@@ -37,13 +38,15 @@ RF_NUM_TREES = 200
 CLASSIFIER_FEATURES = [
     'VV', 'VH', 'VV_ratio', 'VV_sum', 'VV_mean',
     'VV_contrast', 'VV_entropy', 'VV_homogeneity',
-    'VV_correlation', 'VV_ASM', 'VV_variance'
+    'VV_correlation', 'VV_ASM', 'VV_variance',
+    'VH_contrast', 'VH_entropy', 'VH_homogeneity',
+    'VH_correlation', 'VH_ASM', 'VH_variance'
 ]
 CLASS_LABELS = {
     1: 'Water',
     2: 'Sand',
     3: 'Built-up',
-    4: 'Others'
+    4: 'Vegetation'
 }
 
 

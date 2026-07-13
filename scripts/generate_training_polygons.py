@@ -306,34 +306,188 @@ def main():
     except Exception as e:
         print(f"[QC Warning] Failed to add AOI boundary: {e}")
         
-    # Add Legend
-    legend_html = """
+    # Add Draw control for manual polygon digitizing
+    from folium.plugins import Draw
+    draw = Draw(
+        export=True,
+        filename='manual_training_polygons.geojson',
+        position='topleft',
+        draw_options={
+            'polyline': False,
+            'circle': False,
+            'marker': False,
+            'circlemarker': False,
+            'polygon': True,
+            'rectangle': True
+        }
+    )
+    draw.add_to(m)
+
+    # Add Floating panel with training stats and instructions
+    stats_panel_html = """
     <div style="position: fixed; 
-                bottom: 50px; left: 10px; width: 220px; height: 180px; 
-                z-index:9999; font-size:12px; background-color:rgba(255, 255, 255, 0.9);
-                border: 2px solid grey; border-radius: 6px; padding: 10px;
-                box-shadow: 2px 2px 5px rgba(0,0,0,0.2); font-family: sans-serif;">
-        <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; text-align: center;">Training Polygons QC</h4>
-        <div style="display: flex; align-items: center; margin-bottom: 5px;">
-            <div style="width: 16px; height: 16px; background-color: #1a73e8; border: 1px solid #000; margin-right: 8px;"></div>
-            <span>1. Water</span>
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 5px;">
-            <div style="width: 16px; height: 16px; background-color: #d35400; border: 1px solid #000; margin-right: 8px;"></div>
-            <span>2. Sand</span>
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 5px;">
-            <div style="width: 16px; height: 16px; background-color: #e74c3c; border: 1px solid #000; margin-right: 8px;"></div>
-            <span>3. Built-up (Urban)</span>
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 8px;">
-            <div style="width: 16px; height: 16px; background-color: #2ecc71; border: 1px solid #000; margin-right: 8px;"></div>
-            <span>4. Others (Vegetation/Land)</span>
-        </div>
+                bottom: 20px; right: 20px; width: 340px; max-height: 85vh; overflow-y: auto;
+                z-index: 9999; background-color: rgba(33, 37, 41, 0.95); color: #f8f9fa;
+                border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 20px;
+                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                backdrop-filter: blur(8px); line-height: 1.4;">
+        <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 15px; font-weight: 600; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
+            📊 THỐNG KÊ TẬP MẪU HUẤN LUYỆN
+        </h3>
+        
+        <!-- ESA 2021 Stats (Static) -->
+        <h4 style="margin-top: 0; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #ffc107;">
+            📁 Mẫu Gốc ESA WorldCover 2021
+        </h4>
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px;">
+            <thead>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.2); text-align: left; color: #ced4da;">
+                    <th style="padding: 4px 2px;">Lớp phủ</th>
+                    <th style="padding: 4px 2px; text-align: center;">Số lượng</th>
+                    <th style="padding: 4px 2px; text-align: right;">Diện tích (ha)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 4px 2px; display: flex; align-items: center;"><span style="display:inline-block; width:8px; height:8px; background:#1a73e8; margin-right:6px; border-radius:2px;"></span>1. Water</td>
+                    <td style="padding: 4px 2px; text-align: center; font-weight: 600;">60</td>
+                    <td style="padding: 4px 2px; text-align: right;">59.47</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 4px 2px; display: flex; align-items: center;"><span style="display:inline-block; width:8px; height:8px; background:#d35400; margin-right:6px; border-radius:2px;"></span>2. Sand</td>
+                    <td style="padding: 4px 2px; text-align: center; font-weight: 600;">85</td>
+                    <td style="padding: 4px 2px; text-align: right;">188.72</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 4px 2px; display: flex; align-items: center;"><span style="display:inline-block; width:8px; height:8px; background:#e74c3c; margin-right:6px; border-radius:2px;"></span>3. Built-up</td>
+                    <td style="padding: 4px 2px; text-align: center; font-weight: 600;">45</td>
+                    <td style="padding: 4px 2px; text-align: right;">342.61</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 4px 2px; display: flex; align-items: center;"><span style="display:inline-block; width:8px; height:8px; background:#2ecc71; margin-right:6px; border-radius:2px;"></span>4. Others</td>
+                    <td style="padding: 4px 2px; text-align: center; font-weight: 600;">60</td>
+                    <td style="padding: 4px 2px; text-align: right;">487.56</td>
+                </tr>
+                <tr style="font-weight: 600; color: #ced4da;">
+                    <td style="padding: 6px 2px 2px 2px;">Tổng gốc</td>
+                    <td style="padding: 6px 2px 2px 2px; text-align: center;">250</td>
+                    <td style="padding: 6px 2px 2px 2px; text-align: right;">1,078.36</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Manual Stats (Real-time) -->
+        <h4 style="margin-top: 12px; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #00ecff;">
+            ✏️ Mẫu Vẽ Tay (Real-time)
+        </h4>
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px;">
+            <thead>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.2); text-align: left; color: #ced4da;">
+                    <th style="padding: 4px 2px;">Lớp phủ</th>
+                    <th style="padding: 4px 2px; text-align: center;">Số lượng mẫu vẽ tay</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 4px 2px; display: flex; align-items: center;"><span style="display:inline-block; width:8px; height:8px; background:#1a73e8; margin-right:6px; border-radius:2px;"></span>1. Water</td>
+                    <td id="man-val-1" style="padding: 4px 2px; text-align: center; font-weight: 600; color: #00ecff;">0</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 4px 2px; display: flex; align-items: center;"><span style="display:inline-block; width:8px; height:8px; background:#d35400; margin-right:6px; border-radius:2px;"></span>2. Sand</td>
+                    <td id="man-val-2" style="padding: 4px 2px; text-align: center; font-weight: 600; color: #00ecff;">0</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 4px 2px; display: flex; align-items: center;"><span style="display:inline-block; width:8px; height:8px; background:#e74c3c; margin-right:6px; border-radius:2px;"></span>3. Built-up</td>
+                    <td id="man-val-3" style="padding: 4px 2px; text-align: center; font-weight: 600; color: #00ecff;">0</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 4px 2px; display: flex; align-items: center;"><span style="display:inline-block; width:8px; height:8px; background:#2ecc71; margin-right:6px; border-radius:2px;"></span>4. Others</td>
+                    <td id="man-val-4" style="padding: 4px 2px; text-align: center; font-weight: 600; color: #00ecff;">0</td>
+                </tr>
+                <tr style="font-weight: 600; color: #00ecff;">
+                    <td style="padding: 6px 2px 2px 2px;">Tổng vẽ tay</td>
+                    <td id="man-val-total" style="padding: 6px 2px 2px 2px; text-align: center;">0</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h4 style="margin-top: 12px; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #ffc107;">
+            ✍️ HƯỚNG DẪN TỰ VẼ MẪU HUẤN LUYỆN
+        </h4>
+        <ol style="font-size: 10px; padding-left: 14px; margin: 0; line-height: 1.4; color: #ced4da;">
+            <li style="margin-bottom: 4px;">Sử dụng công cụ **vẽ đa giác (Polygon)** hoặc **hình chữ nhật (Rectangle)** ở góc trên bên trái.</li>
+            <li style="margin-bottom: 4px;">Vẽ mẫu trực tiếp trên nền ảnh vệ tinh Google Satellite hoặc Sentinel-2.</li>
+            <li style="margin-bottom: 4px;">Nhập **Class ID** (1, 2, 3 hoặc 4) vào hộp thoại prompt khi vẽ xong.</li>
+            <li style="margin-bottom: 4px;">Bấm vào biểu tượng **Tải xuống (Export)** ở thanh công cụ vẽ để tải file GeoJSON chứa các mẫu mới đã gán thuộc tính.</li>
+        </ol>
     </div>
     """
-    m.get_root().html.add_child(folium.Element(legend_html))
-    
+    m.get_root().html.add_child(folium.Element(stats_panel_html))
+
+    # Add custom JS listener to prompt for Class ID on polygon creation and update real-time statistics
+    prompt_js = """
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Find Leaflet map object
+        var map_objs = Object.keys(window).filter(key => key.startsWith('map_') && window[key] instanceof L.Map);
+        if (map_objs.length > 0) {
+            var map = window[map_objs[0]];
+            
+            // Track manual polygon counts
+            var manual_counts = {1: 0, 2: 0, 3: 0, 4: 0};
+            
+            function updateManualCountsUI() {
+                var total = 0;
+                for (var c = 1; c <= 4; c++) {
+                    var val = manual_counts[c];
+                    var el = document.getElementById('man-val-' + c);
+                    if (el) el.innerText = val;
+                    total += val;
+                }
+                var tot_el = document.getElementById('man-val-total');
+                if (tot_el) tot_el.innerText = total;
+            }
+            
+            map.on(L.Draw.Event.CREATED, function (e) {
+                var layer = e.layer;
+                var cls = prompt("Nhập Class ID cho polygon này:\\n1: Water (Nước)\\n2: Sand (Cát)\\n3: Built-up (Khu dân cư)\\n4: Others (Khác)");
+                if (cls) {
+                    var class_names = {1: 'Water', 2: 'Sand', 3: 'Built-up', 4: 'Others'};
+                    var c_id = parseInt(cls);
+                    if ([1, 2, 3, 4].includes(c_id)) {
+                        layer.feature = layer.feature || {};
+                        layer.feature.type = "Feature";
+                        layer.feature.properties = layer.feature.properties || {};
+                        layer.feature.properties.class = c_id;
+                        layer.feature.properties.className = class_names[c_id];
+                        layer.feature.properties.id = c_id + "_" + Math.random().toString(36).substr(2, 9);
+                        layer.bindTooltip("Class: " + class_names[c_id] + " (ID: " + c_id + ")", {permanent: true, direction: 'center'}).openTooltip();
+                        
+                        // Track class on layer and increment
+                        layer.manual_class = c_id;
+                        manual_counts[c_id]++;
+                        updateManualCountsUI();
+                    } else {
+                        alert("Class ID không hợp lệ! Vui lòng chỉ nhập 1, 2, 3 hoặc 4.");
+                    }
+                }
+            });
+            
+            map.on(L.Draw.Event.DELETED, function (e) {
+                var layers = e.layers;
+                layers.eachLayer(function (layer) {
+                    if (layer.manual_class) {
+                        manual_counts[layer.manual_class] = Math.max(0, manual_counts[layer.manual_class] - 1);
+                    }
+                });
+                updateManualCountsUI();
+            });
+        }
+    });
+    </script>
+    """
+    m.get_root().html.add_child(folium.Element(prompt_js))
+
     folium.LayerControl().add_to(m)
     
     # Save checkpoint HTML

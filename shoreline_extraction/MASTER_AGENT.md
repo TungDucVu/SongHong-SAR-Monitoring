@@ -43,15 +43,14 @@ To ensure compatibility between phases, the following data specifications are en
 * **GEE Projection**: Native Sentinel-1 resolution of `10 meters` (`scale=10`).
 
 ### B. Class Schema
-* **5-Class Classification Schema (Phase 3 & 4)**:
+* **4-Class Classification Schema (Phase 3 & 4)**:
   * `1`: Water
-  * `2`: Wet Sand
-  * `3`: Dry Sand
-  * `4`: Built-up
-  * `5`: Others
+  * `2`: Sand
+  * `3`: Built-up
+  * `4`: Vegetation
 * **Binary Refinement Masks (Phase 4 & 5)**:
   * **Water Mask**: Binary raster where $1 = \text{Water}$ (Class 1) and $0 = \text{All others}$.
-  * **Sand Mask**: Binary raster where $1 = \text{Sand}$ (Classes 2 & 3 combined) and $0 = \text{All others}$.
+  * **Sand Mask**: Binary raster where $1 = \text{Sand}$ (Class 2) and $0 = \text{All others}$.
 
 ### C. Vector Data Contracts
 * **Shared Boundary Output**: GeoJSON or `ee.FeatureCollection` of `LineString` elements representing the contact boundary between the main water body and sandbars.
@@ -64,7 +63,7 @@ To ensure compatibility between phases, the following data specifications are en
 When implementing the pipeline, agents must construct the following core files in order:
 
 ### 1. Module Files
-* [ ] **`src/classification.py`**:
+* [x] **`src/classification.py`**:
   * Implements Phase 2 (GLCM calculation, Feature stack compilation).
   * Implements Phase 3 (Random Forest model training and classification).
 * [ ] **`src/shoreline.py`**:
@@ -76,7 +75,7 @@ When implementing the pipeline, agents must construct the following core files i
   * Houses the Refined Lee filter and border-noise removal routines (already completed).
 
 ### 2. Orchestration Scripts
-* [ ] **`scripts/train_classifier.py`**:
+* [x] **`scripts/train_classifier.py`**:
   * Coordinates training sample extraction.
   * Trains the RF classifier using 2024 Dry/Wet composites as the calibration baseline.
   * Evaluates accuracy (Precision, Recall, F1 for Sand) and saves/exports the trained classifier object.

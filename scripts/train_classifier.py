@@ -15,7 +15,7 @@ from src.classification import (
     run_area_qc, generate_classification_html
 )
 
-def run_pipeline_for_season(year, season, aoi_geometry, training_fc):
+def run_pipeline_for_season(year, season, aoi_geometry, training_fc, features, best_params=None):
     print("\n" + "="*50)
     print(f"      CALIBRATING MODEL FOR {year} {season.upper()}       ")
     print("="*50)
@@ -24,19 +24,18 @@ def run_pipeline_for_season(year, season, aoi_geometry, training_fc):
     print("[Step 1] Loading S1 feature stack composite...")
     composite = create_seasonal_composite(year, season, aoi_geometry)
     
-    # 2. Train RF model (bypass slow sequential tuning with standard parameters)
-    best_params = {'numberOfTrees': 200, 'variablesPerSplit': None, 'bagFraction': 0.7}
-    final_cf, metrics = train_classifier(training_fc, composite, CLASSIFIER_FEATURES, best_params=best_params)
+    # 2. Train RF model
+    final_cf, metrics = train_classifier(training_fc, composite, features, best_params=best_params)
     
     # 3. Apply model to classify the entire composite
     print(f"\n[Step 4] Applying model to classify S1 composite...")
-    classified, max_prob = classify_image(composite, final_cf, CLASSIFIER_FEATURES)
+    classified, max_prob = classify_image(composite, final_cf, features)
     
     # 4. Run post-classification area statistics check
     print(f"\n[Step 5] Running Post-classification Area Statistics Sanity Check...")
     percentages, warnings = run_area_qc(classified, aoi_geometry)
     
-    # 5. Render interactive Folium map
+    # 5. Render interactive Folium QC Map
     print(f"\n[Step 6] Rendering Interactive Folium QC Map...")
     html_path = generate_classification_html(
         composite=composite,
@@ -57,7 +56,7 @@ def run_pipeline_for_season(year, season, aoi_geometry, training_fc):
         f.write(f"Random Forest Classification Report - {year} {season.upper()}\n")
         f.write("="*50 + "\n\n")
         
-        f.write("Optimal Hyperparameters (Tuned Sequentially):\n")
+        f.write("Optimal Hyperparameters:\n")
         for k, v in metrics['best_params'].items():
             f.write(f"  {k}: {v}\n")
         f.write("\n")
@@ -68,7 +67,7 @@ def run_pipeline_for_season(year, season, aoi_geometry, training_fc):
         f.write(f"  Macro F1-score:    {metrics['macro_f1']:.4f}\n\n")
         
         f.write("Class-Specific Metrics:\n")
-        class_names = {1: 'Water', 2: 'Sand', 3: 'Built-up', 4: 'Others'}
+        class_names = {1: 'Water', 2: 'Sand', 3: 'Built-up', 4: 'Vegetation'}
         for c in range(1, 5):
             c_m = metrics['class_metrics'][c]
             f.write(f"  {class_names[c]:<12}: Precision = {c_m['precision']*100:.2f}%, Recall = {c_m['recall']*100:.2f}%, F1 = {c_m['f1_score']:.4f}\n")
@@ -129,9 +128,23 @@ def main():
         print(f"[Error] Failed to load training polygons: {e}")
         return
 
-    # 3. Run pipeline for both seasons of 2024
-    run_pipeline_for_season(2024, 'dry', aoi_geometry, training_fc)
-    run_pipeline_for_season(2024, 'wet', aoi_geometry, training_fc)
+    # Define seasonal feature sets
+    dry_features = CLASSIFIER_FEATURES
+    wet_features = [f for f in CLASSIFIER_FEATURES if not f.startswith('VH_')]
+
+    # 3. Run pipeline for both seasons of 2024 with optimized hyperparameters
+    dry_params = {
+        'numberOfTrees': 300,
+        'variablesPerSplit': 3,
+        'bagFraction': 0.5
+    }
+    wet_params = {
+        'numberOfTrees': 100,
+        'variablesPerSplit': None,
+        'bagFraction': 1.0
+    }
+    run_pipeline_for_season(2024, 'dry', aoi_geometry, training_fc, dry_features, best_params=dry_params)
+    run_pipeline_for_season(2024, 'wet', aoi_geometry, training_fc, wet_features, best_params=wet_params)
 
 if __name__ == '__main__':
     main()

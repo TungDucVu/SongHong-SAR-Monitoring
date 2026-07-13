@@ -81,7 +81,7 @@ def calculate_glcm_textures(image, band_name='VV', window_size=7):
 
 def create_feature_stack(image):
     """
-    Constructs the exact 11-band feature stack required by the contract.
+    Constructs the exact 17-band feature stack including VH textures.
     Ensures correct band sequence and prints band signatures.
     """
     # 1. Extract raw Sentinel-1 bands
@@ -89,10 +89,11 @@ def create_feature_stack(image):
     
     # 2. Compute arithmetic and texture features
     derived = calculate_derived_polarizations(image)
-    textures = calculate_glcm_textures(image, band_name='VV', window_size=7)
+    vv_textures = calculate_glcm_textures(image, band_name='VV', window_size=7)
+    vh_textures = calculate_glcm_textures(image, band_name='VH', window_size=7)
     
-    # 3. Combine and select in strict contract order
-    feature_stack = raw_s1.addBands(derived).addBands(textures)
+    # 3. Combine and select in strict order
+    feature_stack = raw_s1.addBands(derived).addBands(vv_textures).addBands(vh_textures)
     feature_stack = feature_stack.select(CLASSIFIER_FEATURES)
     
     # 4. Print band signatures to stdout for audit
@@ -202,6 +203,7 @@ def prepare_training_samples(image, training_fc, features):
     """
     Extracts S1 features at the training polygon locations.
     Returns the train and validation pixel samples using a polygon-level split to avoid leakage.
+    Samples are limited globally per class (and shuffled) to ensure balanced class sizes.
     """
     # 1. Split training polygons at the polygon level (70% train, 30% validation)
     training_fc = training_fc.randomColumn('split_rand', seed=42)
@@ -212,8 +214,8 @@ def prepare_training_samples(image, training_fc, features):
     print(f"  Training polygon count: {train_polys.size().getInfo()}")
     print(f"  Validation polygon count: {val_polys.size().getInfo()}")
     
-    # 2. Sample regions for pixels inside train and validation polygons
-    train_samples = image.select(features).sampleRegions(
+    # 2. Sample ALL regions for pixels inside train and validation polygons
+    train_samples_all = image.select(features).sampleRegions(
         collection=train_polys,
         properties=['class'],
         scale=30,
@@ -221,7 +223,7 @@ def prepare_training_samples(image, training_fc, features):
         tileScale=16
     )
     
-    val_samples = image.select(features).sampleRegions(
+    val_samples_all = image.select(features).sampleRegions(
         collection=val_polys,
         properties=['class'],
         scale=30,
@@ -229,6 +231,32 @@ def prepare_training_samples(image, training_fc, features):
         tileScale=16
     )
     
+    # 3. Limit per class globally:
+    # Target totals: Water=1000, Sand=1800, Built=1800, Vegetation=1800
+    # Split 70/30:
+    # Train: Water=700, Sand=1260, Built=1260, Vegetation=1260
+    # Val:   Water=300, Sand=540,  Built=540,  Vegetation=540
+    train_limits = {1: 700, 2: 1260, 3: 1260, 4: 1260}
+    val_limits = {1: 300, 2: 540, 3: 540, 4: 540}
+    
+    train_samples = ee.FeatureCollection([])
+    val_samples = ee.FeatureCollection([])
+    
+    for c in [1, 2, 3, 4]:
+        # Filter, shuffle, and limit for training
+        c_train = train_samples_all.filter(ee.Filter.eq('class', c))\
+                                   .randomColumn('rand', seed=42)\
+                                   .sort('rand')\
+                                   .limit(train_limits[c])
+        train_samples = train_samples.merge(c_train)
+        
+        # Filter, shuffle, and limit for validation
+        c_val = val_samples_all.filter(ee.Filter.eq('class', c))\
+                               .randomColumn('rand', seed=42)\
+                               .sort('rand')\
+                               .limit(val_limits[c])
+        val_samples = val_samples.merge(c_val)
+        
     # Print pixel sample sizes
     print(f"  Training pixel sample size: {train_samples.size().getInfo()}")
     print(f"  Validation pixel sample size: {val_samples.size().getInfo()}")
@@ -347,7 +375,7 @@ def train_classifier(training_fc, image, features, best_params=None):
     print(f"\n--- Running Final Multi-Seed Model Training (5 seeds) ---")
     print(f"Optimal Hyperparams: trees={best_params['numberOfTrees']}, variablesPerSplit={best_params['variablesPerSplit']}, bagFraction={best_params['bagFraction']}")
     
-    seeds = [42]
+    seeds = [42, 52, 62, 72, 82]
     
     overall_accs = []
     kappas = []
@@ -542,14 +570,14 @@ def run_area_qc(classified, aoi_geometry):
     Water expected baseline: ~32%
     Sand expected baseline: ~11%
     Built-up expected baseline: ~14%
-    Others expected baseline: ~43%
+    Vegetation expected baseline: ~43%
     """
     print("\n--- Running Area Statistics QC (via Sampling: 1000 pixels) ---")
     
-    # 1. Sample 1000 random pixels within the AOI boundary at 30m scale
+    # 1. Sample 1000 random pixels within the AOI boundary at 100m scale to avoid GEE memory limit exceeded
     samples = classified.sample(
         region=aoi_geometry,
-        scale=30,
+        scale=100,
         numPixels=1000,
         geometries=False
     )
@@ -715,7 +743,7 @@ def generate_classification_html(composite, classified, max_prob, year, season, 
     try:
         folium.GeoJson(
             combined_fc.getInfo(),
-            name="Training Polygons (Water/Sand/Builtup/Others)",
+            name="Training Polygons (Water/Sand/Builtup/Vegetation)",
             style_function=style_poly,
             tooltip=folium.GeoJsonTooltip(
                 fields=['id', 'className'],
@@ -756,7 +784,7 @@ def generate_classification_html(composite, classified, max_prob, year, season, 
         </div>
         <div style="display: flex; align-items: center; margin-bottom: 8px;">
             <div style="width: 16px; height: 16px; background-color: #2ecc71; border: 1px solid #000; margin-right: 8px;"></div>
-            <span>4. Others (Veg/Land)</span>
+            <span>4. Vegetation</span>
         </div>
         <hr style="margin: 4px 0 6px 0;">
         <div>Overall Acc: <b>{metrics['overall_accuracy']*100:.2f}%</b></div>
