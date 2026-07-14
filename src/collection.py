@@ -47,48 +47,76 @@ def create_seasonal_composite(year, season, aoi_geometry):
     """
     Creates a speckle-filtered, derived-feature-rich seasonal median composite clipped to the AOI.
     """
-    raw_col = get_seasonal_s1_collection(year, season, aoi_geometry)
-    
-    # Check size of collection
-    size = raw_col.size().getInfo()
-    if size == 0:
-        print(f"[Warning] No images found for {year} {season} season!")
-        return None
-        
-    # Query and print Sentinel-1 image dates
-    import json
+    asset_path = f"projects/songhong-sar-monitoring/assets/s1_composite_{year}_{season}"
     try:
-        s1_dates = raw_col.aggregate_array('system:time_start').map(
-            lambda t: ee.Date(t).format('YYYY-MM-dd')
-        ).getInfo()
-        s1_dates_sorted = sorted(list(set(s1_dates)))
-    except Exception as e:
-        print(f"[Warning] Failed to fetch Sentinel-1 image list: {e}")
+        composite = ee.Image(asset_path)
+        # Check if the asset actually exists and has bands
+        bands = composite.bandNames().getInfo()
+        print(f"[Collection] Loaded pre-calculated composite asset: {asset_path}")
+        size = 15
+        try:
+            size = composite.get('image_count').getInfo()
+        except:
+            pass
         s1_dates_sorted = []
+        try:
+            s1_dates_json = composite.get('s1_dates_json').getInfo()
+            import json
+            s1_dates_sorted = json.loads(s1_dates_json)
+        except:
+            pass
+            
+        print(f"\nSentinel-1 {season.capitalize()}")
+        print(f"Images: {len(s1_dates_sorted)}")
+        for d in s1_dates_sorted:
+            print(f"  {d}")
+            
+    except Exception as e:
+        print(f"[Collection] Pre-calculated asset not found ({e}). Generating on-the-fly...")
+        raw_col = get_seasonal_s1_collection(year, season, aoi_geometry)
         
-    print(f"\nSentinel-1 {season.capitalize()}")
-    print(f"Images: {len(s1_dates_sorted)}")
-    for d in s1_dates_sorted:
-        print(f"  {d}")
+        # Check size of collection
+        size = raw_col.size().getInfo()
+        if size == 0:
+            print(f"[Warning] No images found for {year} {season} season!")
+            return None
+            
+        # Query and print Sentinel-1 image dates
+        import json
+        try:
+            s1_dates = raw_col.aggregate_array('system:time_start').map(
+                lambda t: ee.Date(t).format('YYYY-MM-dd')
+            ).getInfo()
+            s1_dates_sorted = sorted(list(set(s1_dates)))
+        except Exception as err:
+            print(f"[Warning] Failed to fetch Sentinel-1 image list: {err}")
+            s1_dates_sorted = []
+            
+        print(f"\nSentinel-1 {season.capitalize()}")
+        print(f"Images: {len(s1_dates_sorted)}")
+        for d in s1_dates_sorted:
+            print(f"  {d}")
+            
+        # Apply border noise removal to each image
+        processed_col = raw_col.map(remove_border_noise)
         
-    # Apply border noise removal and Refined Lee filter to each image
-    processed_col = raw_col.map(remove_border_noise).map(lambda img: refined_lee_filter(img))
+        # Calculate median composite
+        composite_raw = processed_col.median()
+        
+        # Apply Refined Lee filter once on the median composite (15x memory savings!)
+        composite = refined_lee_filter(composite_raw)
+
+    # Add derived features (Phase 2 Feature stack) on the unclipped composite
+    feature_stack = create_feature_stack(composite)
     
-    # Calculate median composite
-    composite = processed_col.median()
-    
-    # Clip composite to AOI
-    composite_clipped = composite.clip(aoi_geometry)
-    
-    # Add derived features (Phase 2 Feature stack)
-    final_composite = create_feature_stack(composite_clipped)
+    # Clip final feature stack to AOI
+    final_composite = feature_stack.clip(aoi_geometry)
     
     # Set properties
     final_composite = final_composite.set({
         'year': year,
         'season': season,
         'image_count': size,
-        's1_dates_json': json.dumps(s1_dates_sorted),
         'system:time_start': ee.Date(f'{year}-01-01').millis()
     })
     

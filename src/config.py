@@ -32,6 +32,8 @@ TRAINING_POLYGONS_PATH = os.path.join(PROJECT_ROOT, 'aoi', 'training_polygons.ge
 CENTERLINE_GEOJSON_PATH = os.path.join(PROJECT_ROOT, 'aoi', 'song_hong_centerline.geojson')
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'outputs')
 METADATA_JSON_PATH = os.path.join(OUTPUT_DIR, 's1_dataset_metadata.json')
+SHORELINE_RAW_DRY_PATH = os.path.join(OUTPUT_DIR, 'shoreline_2024_dry_raw.geojson')
+SHORELINE_RAW_WET_PATH = os.path.join(OUTPUT_DIR, 'shoreline_2024_wet_raw.geojson')
 
 # Machine Learning Settings
 RF_NUM_TREES = 200
