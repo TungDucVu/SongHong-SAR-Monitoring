@@ -109,13 +109,13 @@ def main():
     
     shoreline_gdf = gpd.read_file(SHORELINE_RAW_DRY_PATH)
     
-    # 4. Find the centroid of the longest segment to define our 500m x 500m AOI
-    # (Ensure we are around a sandbar where water and sand contact)
+    # 4. Find the centroid of the 3rd longest segment to define our 500m x 500m AOI
+    # (Ensure we are around another active sandbar where water and sand contact)
     shoreline_gdf['length'] = shoreline_gdf.geometry.length
-    longest_segment = shoreline_gdf.sort_values(by='length', ascending=False).iloc[0]
+    longest_segment = shoreline_gdf.sort_values(by='length', ascending=False).iloc[2]
     centroid = longest_segment.geometry.centroid
     cx, cy = centroid.x, centroid.y
-    print(f"Selected centroid for 500m AOI: Easting={cx:.2f}, Northing={cy:.2f} (UTM Zone 48N)")
+    print(f"Selected centroid for 500m AOI (Index 2): Easting={cx:.2f}, Northing={cy:.2f} (UTM Zone 48N)")
     
     # 5. Create a 500m x 500m bounding box in EPSG:32648
     aoi_box = box(cx - 250, cy - 250, cx + 250, cy + 250)
