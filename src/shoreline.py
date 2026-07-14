@@ -275,7 +275,7 @@ def extract_shared_boundary(classified, aoi_geometry, centerline_fc, scale=20):
         
     # 7. Shared Boundary Extraction
     print("[Phase 5] Extracting water-sand shared boundary...")
-    raw_boundary = water_main.boundary.intersection(sand_main.buffer(0.1))
+    raw_boundary = water_main.boundary.intersection(sand_main.boundary)
     
     # 8. Explode into individual LineStrings
     raw_lines = []
