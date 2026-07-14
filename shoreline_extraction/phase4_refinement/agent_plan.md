@@ -15,7 +15,7 @@ Post-process the classified raster mask to suppress pixel-level noise, break thi
   * Classified raster GEE Image from Phase 3.
   * Active river centerline vector layer (for spatial routing).
 * **Output**: 
-  * Cleaned binary Water and Sand raster masks representing only the active Red River system.
+  * Refined 4-class raster masks (Water, Sand, Built, Vegetation) representing the active Red River system.
 
 ---
 
