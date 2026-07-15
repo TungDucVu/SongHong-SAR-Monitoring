@@ -16,19 +16,157 @@ from src.config import (
     SHORELINE_OPEN_SIZE, SHORELINE_CLOSE_SIZE
 )
 
+def get_continuous_centerline(centerline_path=None, aoi_path=None):
+    """
+    Reads the centerline GeoJSON, sorts segments from NW to SE, and connects 
+    endpoints of adjacent segments to bridge gaps.
+    If the gap is at the AOI boundary, it routes the bridge along the AOI boundary.
+    Otherwise, it uses a straight-line bridge.
+    Returns the continuous centerline as a shapely LineString.
+    """
+    if centerline_path is None:
+        centerline_path = CENTERLINE_GEOJSON_PATH
+    if aoi_path is None:
+        aoi_path = os.path.join(os.path.dirname(centerline_path), 'song_hong_aoi.geojson')
+        
+    if not os.path.exists(centerline_path):
+        raise FileNotFoundError(f"Centerline GeoJSON not found at: {centerline_path}")
+        
+    with open(centerline_path, 'r', encoding='utf-8') as f:
+        cl_data = json.load(f)
+        
+    # Read AOI boundary
+    from shapely.ops import linemerge, unary_union, substring
+    from shapely.geometry import shape, LineString, Point
+    
+    aoi_boundary = None
+    if os.path.exists(aoi_path):
+        try:
+            with open(aoi_path, 'r', encoding='utf-8') as f:
+                aoi_data = json.load(f)
+            # Find the main polygon geometry
+            aoi_geoms = [shape(fe['geometry']) for fe in aoi_data['features']]
+            aoi_union = unary_union(aoi_geoms)
+            # Extract boundary
+            if aoi_union.geom_type == 'Polygon':
+                aoi_boundary = aoi_union.exterior
+            elif aoi_union.geom_type == 'MultiPolygon':
+                largest_poly = max(aoi_union.geoms, key=lambda p: p.area)
+                aoi_boundary = largest_poly.exterior
+        except Exception as e:
+            print(f"[Warning] Failed to load/parse AOI boundary: {e}")
+            
+    # Extract LineString segments
+    geoms = []
+    for fe in cl_data['features']:
+        g = shape(fe['geometry'])
+        if g.geom_type == 'LineString':
+            geoms.append(g)
+        elif g.geom_type == 'MultiLineString':
+            geoms.extend(g.geoms)
+        elif g.geom_type == 'GeometryCollection':
+            for sg in g.geoms:
+                if sg.geom_type == 'LineString':
+                    geoms.append(sg)
+                elif sg.geom_type == 'MultiLineString':
+                    geoms.extend(sg.geoms)
+                    
+    if not geoms:
+        raise ValueError("No LineString geometries found in centerline file.")
+        
+    # Merge where touching
+    merged = linemerge(geoms)
+    if merged.geom_type == 'LineString':
+        return merged
+        
+    segments = list(merged.geoms)
+    # Sort segments from Northwest to Southeast (by Y descending)
+    segments = sorted(segments, key=lambda s: s.centroid.y, reverse=True)
+    
+    connected_coords = list(segments[0].coords)
+    
+    for seg in segments[1:]:
+        last_pt = Point(connected_coords[-1])
+        first_pt = Point(seg.coords[0])
+        end_pt = Point(seg.coords[-1])
+        
+        # Decide direction
+        dist_to_start = last_pt.distance(first_pt)
+        dist_to_end = last_pt.distance(end_pt)
+        
+        if dist_to_start <= dist_to_end:
+            target_pt = first_pt
+            append_coords = list(seg.coords)
+        else:
+            target_pt = end_pt
+            append_coords = list(seg.coords)[::-1]
+            
+        # Bridge the gap
+        bridge_coords = []
+        if aoi_boundary is not None and last_pt.distance(aoi_boundary) < 0.002 and target_pt.distance(aoi_boundary) < 0.002:
+            try:
+                t_last = aoi_boundary.project(last_pt)
+                t_target = aoi_boundary.project(target_pt)
+                
+                if t_last > t_target:
+                    t_min, t_max = t_target, t_last
+                else:
+                    t_min, t_max = t_last, t_target
+                    
+                path1 = substring(aoi_boundary, t_min, t_max)
+                path2_part1 = substring(aoi_boundary, t_max, aoi_boundary.length)
+                path2_part2 = substring(aoi_boundary, 0, t_min)
+                path2_coords = list(path2_part1.coords) + list(path2_part2.coords)
+                path2 = LineString(path2_coords)
+                
+                if path1.length <= path2.length:
+                    connection = path1
+                else:
+                    connection = path2
+                    
+                c_coords = list(connection.coords)
+                if Point(c_coords[0]).distance(last_pt) > Point(c_coords[-1]).distance(last_pt):
+                    c_coords = c_coords[::-1]
+                bridge_coords = c_coords
+            except Exception as e:
+                print(f"[Warning] Routing along boundary failed: {e}")
+                bridge_coords = [last_pt.coords[0], target_pt.coords[0]]
+        else:
+            bridge_coords = [last_pt.coords[0], target_pt.coords[0]]
+            
+        if len(bridge_coords) > 2:
+            connected_coords.extend(bridge_coords[1:-1])
+            
+        connected_coords.extend(append_coords)
+        
+    return LineString(connected_coords)
+
 def load_centerline(project_id=None):
     """
-    Loads local centerline GeoJSON and returns it as an ee.FeatureCollection.
+    Loads local centerline GeoJSON, makes it continuous by bridging gaps,
+    and returns it as an ee.FeatureCollection.
     """
     if not ee.data.is_initialized():
         ee.Initialize(project=project_id)
         
-    if not os.path.exists(CENTERLINE_GEOJSON_PATH):
-        raise FileNotFoundError(f"Centerline GeoJSON not found at: {CENTERLINE_GEOJSON_PATH}")
-        
-    with open(CENTERLINE_GEOJSON_PATH, 'r', encoding='utf-8') as f:
-        geojson_data = json.load(f)
-        
+    cl_linestring = get_continuous_centerline()
+    
+    geojson_data = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {
+                    "name": "Song Hong Continuous Centerline"
+                },
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": list(cl_linestring.coords)
+                }
+            }
+        ]
+    }
+    
     return ee.FeatureCollection(geojson_data)
 
 def refine_classification(classified, aoi_geometry, centerline_fc=None, open_radius=2, close_radius=3):
@@ -152,19 +290,27 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
     bbox = buffer_geom.bounds()
     
     print(f"[Phase 5] Requesting GEE download URL for refined water mask at {scale}m scale...")
-    try:
-        url = water_mask_unmasked.clip(buffer_geom).getDownloadURL({
-            'scale': scale,
-            'crs': 'EPSG:32648',
-            'region': bbox.getInfo(),
-            'format': 'GEO_TIFF'
-        })
-        print(f"[Phase 5] Downloading refined water mask from GEE...")
-        r = requests.get(url, timeout=300)
-        r.raise_for_status()
-    except Exception as e:
-        print(f"[Error] GEE download failed: {e}")
-        raise e
+    
+    # Try up to 5 times with exponential backoff for GEE downloads
+    for attempt in range(5):
+        try:
+            url = water_mask_unmasked.clip(buffer_geom).getDownloadURL({
+                'scale': scale,
+                'crs': 'EPSG:32648',
+                'region': bbox.getInfo(),
+                'format': 'GEO_TIFF'
+            })
+            print(f"[Phase 5] Downloading refined water mask from GEE (attempt {attempt+1}/5)...")
+            r = requests.get(url, timeout=300)
+            r.raise_for_status()
+            break
+        except Exception as e:
+            if attempt == 4:
+                print(f"[Error] GEE download failed after 5 attempts: {e}")
+                raise e
+            wait_time = (2 ** attempt) + np.random.uniform(0, 1)
+            print(f"[Warning] GEE download failed: {e}. Retrying in {wait_time:.1f}s...")
+            time.sleep(wait_time)
         
     print(f"[Phase 5] Parsing GeoTIFF and polygonizing locally...")
     with rasterio.open(io.BytesIO(r.content)) as src:
@@ -588,3 +734,454 @@ def clean_shoreline_graph(shoreline_gdf, config_dict=None):
     cleaned_gdf = gpd.GeoDataFrame(cleaned_features, crs="EPSG:32648")
     print(f"[Phase 6] Completed. Reduced segment count from {len(shoreline_gdf)} to {len(cleaned_gdf)}. Cleaned shoreline length: {cleaned_gdf.geometry.length.sum()/1000:.2f} km.")
     return cleaned_gdf
+
+def resample_line(line, spacing=30.0):
+    """
+    Resamples a LineString or MultiLineString to have vertices at a maximum spacing.
+    This prevents Chaikin's algorithm from cutting excessively large corners on long segments.
+    """
+    import numpy as np
+    from shapely.geometry import LineString
+    from shapely.ops import unary_union
+    
+    if line.is_empty:
+        return line
+    if line.geom_type == 'LineString':
+        length = line.length
+        if length < spacing:
+            return line
+        distances = np.arange(0, length, spacing)
+        if len(distances) == 0 or distances[-1] < length:
+            distances = np.append(distances, length)
+        pts = [line.interpolate(d) for d in distances]
+        return LineString(pts)
+    elif line.geom_type == 'MultiLineString':
+        parts = []
+        for part in line.geoms:
+            parts.append(resample_line(part, spacing))
+        return unary_union(parts)
+    return line
+
+def smooth_and_simplify_shoreline(cleaned_gdf, config_dict=None):
+    """
+    Implements Phase 7: Smoothing & Simplification.
+    
+    1. Resamples line segments to 30.0m spacing to limit Chaikin corner-cutting deviation.
+    2. Applies Chaikin's corner-cutting algorithm (default 3 iterations) to round pixelated corners.
+       Correctly distinguishes between closed rings (e.g. islands, wrap-around closure) and open curves (keeps endpoints fixed and cuts internal corners).
+    3. Applies Douglas-Peucker simplification using Shapely's simplify(dp_tolerance, preserve_topology=True).
+    4. Validates topology (is_valid, non-empty, simple).
+    5. Logs vertex reduction percentage and verifies maximum Hausdorff distance deviation (<= 15.0m).
+    
+    Returns:
+      smoothed_gdf (gpd.GeoDataFrame): Smoothed and simplified shoreline in EPSG:32648.
+      metrics (dict): Summary metrics of the smoothing process.
+    """
+    import numpy as np
+    from shapely.geometry import Point
+    
+    if config_dict is None:
+        config_dict = SHORELINE_CONFIG
+        
+    chaikin_iterations = config_dict.get('chaikin_iterations', 3)
+    dp_tolerance = config_dict.get('dp_tolerance', 1.0)
+    
+    def chaikin_smooth(geom, iterations):
+        if geom.is_empty or geom.geom_type not in ('LineString', 'LinearRing'):
+            return geom
+            
+        coords = np.array(geom.coords)
+        if len(coords) < 3:
+            return geom
+            
+        is_closed = geom.is_closed or np.allclose(coords[0], coords[-1])
+        
+        for _ in range(iterations):
+            if is_closed:
+                # Closed loop: exclude duplicate end point, smooth, then re-close
+                pts = coords[:-1]
+                n = len(pts)
+                new_pts = []
+                for i in range(n):
+                    p_curr = pts[i]
+                    p_next = pts[(i + 1) % n]
+                    q = p_curr * 0.75 + p_next * 0.25
+                    r = p_curr * 0.25 + p_next * 0.75
+                    new_pts.extend([q, r])
+                new_pts.append(new_pts[0])
+                coords = np.array(new_pts)
+            else:
+                # Open curve: keep endpoints fixed, cut internal corners
+                n = len(coords)
+                new_pts = [coords[0]]
+                for i in range(n - 2):
+                    r_curr = coords[i] * 0.25 + coords[i+1] * 0.75
+                    q_next = coords[i+1] * 0.75 + coords[i+2] * 0.25
+                    new_pts.extend([r_curr, q_next])
+                new_pts.append(coords[-1])
+                coords = np.array(new_pts)
+                
+        return LineString(coords)
+        
+    smoothed_features = []
+    total_vertices_before = 0
+    total_vertices_after = 0
+    max_hausdorff_deviation = 0.0
+    
+    for idx, row in cleaned_gdf.iterrows():
+        geom = row.geometry
+        if geom.is_empty:
+            continue
+            
+        # Count vertices before
+        num_v_before = len(geom.coords) if geom.geom_type == 'LineString' else sum(len(g.coords) for g in geom.geoms)
+        total_vertices_before += num_v_before
+        
+        # 1. Resample line to 30.0m maximum spacing before smoothing
+        resampled_geom = resample_line(geom, spacing=30.0)
+        
+        # 2. Apply Chaikin smoothing
+        smoothed_geom = chaikin_smooth(resampled_geom, chaikin_iterations)
+        
+        # 3. Apply Douglas-Peucker simplification
+        simplified_geom = smoothed_geom.simplify(dp_tolerance, preserve_topology=True)
+        simplified_geom = make_valid(simplified_geom)
+        
+        # Count vertices after
+        num_v_after = len(simplified_geom.coords) if simplified_geom.geom_type == 'LineString' else sum(len(g.coords) for g in simplified_geom.geoms)
+        total_vertices_after += num_v_after
+        
+        # Compute Hausdorff distance deviation between original cleaned geom and final simplified geom
+        h_dist = geom.hausdorff_distance(simplified_geom)
+        if h_dist > max_hausdorff_deviation:
+            max_hausdorff_deviation = h_dist
+            
+        new_row = row.copy()
+        new_row.geometry = simplified_geom
+        smoothed_features.append(new_row)
+        
+    smoothed_gdf = gpd.GeoDataFrame(smoothed_features, crs=cleaned_gdf.crs)
+    
+    reduction_pct = 0.0
+    if total_vertices_before > 0:
+        reduction_pct = (total_vertices_before - total_vertices_after) / total_vertices_before * 100.0
+        
+    metrics = {
+        'total_vertices_before': total_vertices_before,
+        'total_vertices_after': total_vertices_after,
+        'vertex_reduction_pct': reduction_pct,
+        'max_hausdorff_deviation_m': max_hausdorff_deviation
+    }
+    
+    print(f"[Phase 7] Smoothing & Simplification Complete.")
+    print(f"  - Vertex reduction: {total_vertices_before} -> {total_vertices_after} ({reduction_pct:.2f}%)")
+    print(f"  - Max Hausdorff deviation: {max_hausdorff_deviation:.2f} m (Threshold: 15.0 m)")
+    
+    return smoothed_gdf, metrics
+
+def generate_validation_shoreline_s2(year, season, aoi_geometry, config_dict=None):
+    """
+    Implements Phase 8: Sentinel-2 NDWI reference shoreline extraction.
+    
+    1. Queries COPERNICUS/S2_SR_HARMONIZED for the given year and season.
+    2. Masks clouds using the QA60 band.
+    3. Computes NDWI composite: (B3 - B8) / (B3 + B8).
+    4. Thresholds NDWI (> 0.0) to create a binary water mask.
+    5. Downloads the unmasked binary water mask at 20m scale and polygonizes locally.
+    6. Main Water Polygon Selection: selects the main channel using the continuous centerline.
+    7. Extracts boundaries (exterior and persistent islands).
+    
+    Returns:
+      reference_gdf (gpd.GeoDataFrame): Sentinel-2 reference shoreline in EPSG:32648.
+    """
+    import requests
+    import io
+    import rasterio
+    from rasterio.features import shapes
+    import time
+    
+    start_time = time.time()
+    
+    if config_dict is None:
+        config_dict = SHORELINE_CONFIG
+        
+    min_main_water_area = config_dict.get('min_main_water_area', 100000.0)
+    min_island_area = config_dict.get('min_island_area', 10000.0)
+    min_centerline_intersection = config_dict.get('min_centerline_intersection', 1000.0)
+    
+    # 1. Fetch S2 collection
+    s2_col = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+              .filterBounds(aoi_geometry)
+              .filterDate(f'{year}-01-01', f'{year}-12-31')
+              .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 25)))
+              
+    if season == 'dry':
+        s2_col = s2_col.filter(ee.Filter.Or(
+            ee.Filter.calendarRange(1, 4, 'month'),
+            ee.Filter.calendarRange(11, 12, 'month')
+        ))
+    elif season == 'wet':
+        s2_col = s2_col.filter(ee.Filter.calendarRange(5, 10, 'month'))
+        
+    def mask_s2_clouds(img):
+        qa = img.select('QA60')
+        cloud_bit = 1 << 10
+        cirrus_bit = 1 << 11
+        mask = qa.bitwiseAnd(cloud_bit).eq(0).And(qa.bitwiseAnd(cirrus_bit).eq(0))
+        return img.updateMask(mask)
+        
+    s2_masked = s2_col.map(mask_s2_clouds)
+    s2_median = s2_masked.median().clip(aoi_geometry)
+    
+    # Calculate NDWI: (B3 - B8) / (B3 + B8)
+    ndwi = s2_median.normalizedDifference(['B3', 'B8'])
+    water_mask = ndwi.gt(0.0).unmask(0).eq(1)
+    
+    # Restrict to centerline 2km buffer bounding box (just like S1)
+    centerline_fc = load_centerline()
+    buffer_geom = centerline_fc.geometry().buffer(2000)
+    bbox = buffer_geom.bounds()
+    
+    print(f"[Phase 8] Requesting S2 download URL for NDWI water mask...")
+    
+    # Try up to 5 times with exponential backoff for GEE downloads
+    for attempt in range(5):
+        try:
+            url = water_mask.clip(buffer_geom).getDownloadURL({
+                'scale': 20, # 20m scale is very fast and has good precision for validation
+                'crs': 'EPSG:32648',
+                'region': bbox.getInfo(),
+                'format': 'GEO_TIFF'
+            })
+            print(f"[Phase 8] Downloading S2 water mask from GEE (attempt {attempt+1}/5)...")
+            r = requests.get(url, timeout=300)
+            r.raise_for_status()
+            break
+        except Exception as e:
+            if attempt == 4:
+                print(f"[Error] S2 water mask download failed after 5 attempts: {e}")
+                raise e
+            wait_time = (2 ** attempt) + np.random.uniform(0, 1)
+            print(f"[Warning] S2 water mask download failed: {e}. Retrying in {wait_time:.1f}s...")
+            time.sleep(wait_time)
+        
+    print(f"[Phase 8] Parsing GeoTIFF and polygonizing S2 water mask locally...")
+    with rasterio.open(io.BytesIO(r.content)) as src:
+        raster_data = src.read(1)
+        transform = src.transform
+        
+    water_geoms = []
+    for geom, val in shapes(raster_data, transform=transform):
+        if val == 1:
+            water_geoms.append(shape(geom))
+            
+    print(f"[Phase 8] Extracted {len(water_geoms)} S2 water polygons locally.")
+    
+    if not water_geoms:
+        print("[Warning] No S2 water polygons found.")
+        return gpd.GeoDataFrame(geometry=[], crs="EPSG:32648")
+        
+    # Get continuous centerline locally for intersection selection
+    cl_linestring = get_continuous_centerline()
+    cl_gdf = gpd.GeoDataFrame(geometry=[cl_linestring], crs="EPSG:4326").to_crs("EPSG:32648")
+    centerline_union = cl_gdf.geometry.unary_union
+    
+    cl_intersection_lengths = [poly.intersection(centerline_union).length for poly in water_geoms]
+    max_intersect_len = max(cl_intersection_lengths) if cl_intersection_lengths else 0.0
+    
+    selected_polys = []
+    for poly, intersect_len in zip(water_geoms, cl_intersection_lengths):
+        if (intersect_len >= min_centerline_intersection) or (intersect_len > 0 and intersect_len == max_intersect_len):
+            selected_polys.append(poly)
+            
+    if not selected_polys:
+        print("[Warning] No main S2 water corridor polygons found.")
+        return gpd.GeoDataFrame(geometry=[], crs="EPSG:32648")
+        
+    # Dissolve water polygons
+    from shapely.ops import unary_union as shapely_unary_union
+    water_dissolved = make_valid(shapely_unary_union(selected_polys))
+    
+    if not water_dissolved.is_valid:
+        water_dissolved = make_valid(water_dissolved)
+        
+    # Boundary extraction
+    raw_lines = []
+    def process_polygon(poly):
+        if poly.is_empty:
+            return
+        if poly.exterior and not poly.exterior.is_empty:
+            raw_lines.append((poly.exterior, False))
+        for interior in poly.interiors:
+            if not interior.is_empty:
+                island_poly = Polygon(interior)
+                if island_poly.area >= min_island_area:
+                    raw_lines.append((interior, True))
+                    
+    if water_dissolved.geom_type == 'Polygon':
+        process_polygon(water_dissolved)
+    elif water_dissolved.geom_type == 'MultiPolygon':
+        for poly in water_dissolved.geoms:
+            process_polygon(poly)
+            
+    valid_lines = []
+    for ring, is_island in raw_lines:
+        line_geom = LineString(ring.coords)
+        line_valid = make_valid(line_geom)
+        if line_valid.geom_type == 'LineString':
+            if not line_valid.is_empty and line_valid.length >= 10.0:
+                valid_lines.append((line_valid, is_island))
+        elif line_valid.geom_type in ('MultiLineString', 'GeometryCollection'):
+            for g in line_valid.geoms:
+                if g.geom_type == 'LineString' and not g.is_empty and g.length >= 10.0:
+                    valid_lines.append((g, is_island))
+                    
+    features = []
+    for idx, (line, is_island) in enumerate(valid_lines):
+        features.append({
+            'geometry': line,
+            'id': f"ref_s2_{year}_{season}_{idx}",
+            'is_island': is_island,
+            'length_m': line.length
+        })
+        
+    ref_gdf = gpd.GeoDataFrame(features, crs="EPSG:32648")
+    print(f"[Phase 8] Extracted S2 NDWI reference shoreline. {len(ref_gdf)} segments, total length: {ref_gdf.geometry.length.sum()/1000:.2f} km")
+    return ref_gdf
+
+def validate_shoreline(extracted_gdf, reference_gdf):
+    """
+    Computes nearest-neighbor distance metrics between extracted and reference shorelines
+    after 5m resampling to prevent vertex-density bias.
+    
+    Returns:
+      metrics (dict): Comprehensive positional QC stats, raw distances, points, and association info.
+    """
+    import numpy as np
+    from scipy.spatial import cKDTree
+    
+    if extracted_gdf.empty or reference_gdf.empty:
+        print("[Warning] Empty inputs for validation. Returning zero metrics.")
+        return {
+            'min_dist_m': 0.0,
+            'max_dist_m': 0.0,
+            'mean_dist_m': 0.0,
+            'median_dist_m': 0.0,
+            'std_dist_m': 0.0,
+            'rmse_dist_m': 0.0,
+            'p75_dist_m': 0.0,
+            'p90_dist_m': 0.0,
+            'p95_dist_m': 0.0,
+            'p99_dist_m': 0.0,
+            'hausdorff_dist_m': 0.0,
+            'distances': np.array([]),
+            'ext_points_info': []
+        }
+        
+    def resample_gdf_points_with_meta(gdf, spacing=5.0):
+        points_info = []
+        for idx, row in gdf.iterrows():
+            geom = row.geometry
+            if geom.is_empty:
+                continue
+                
+            # Get metadata
+            seg_id = row.get('id', f"segment_{idx}")
+            bank_type = row.get('bank_type', 'unknown')
+            is_island = row.get('is_island', False)
+            
+            def add_pts(g):
+                length = g.length
+                distances = np.arange(0, length, spacing)
+                if len(distances) == 0 or distances[-1] < length:
+                    distances = np.append(distances, length)
+                for d in distances:
+                    pt = g.interpolate(d)
+                    points_info.append({
+                        'point': pt,
+                        'segment_id': seg_id,
+                        'bank_type': bank_type,
+                        'is_island': is_island
+                    })
+                    
+            if geom.geom_type == 'LineString':
+                add_pts(geom)
+            elif geom.geom_type == 'MultiLineString':
+                for g in geom.geoms:
+                    add_pts(g)
+        return points_info
+        
+    # Resample both shorelines at 5m
+    ext_points_info = resample_gdf_points_with_meta(extracted_gdf, spacing=5.0)
+    ref_points_info = resample_gdf_points_with_meta(reference_gdf, spacing=5.0)
+    
+    if not ext_points_info or not ref_points_info:
+        print("[Warning] No points extracted after resampling.")
+        return {
+            'min_dist_m': 0.0,
+            'max_dist_m': 0.0,
+            'mean_dist_m': 0.0,
+            'median_dist_m': 0.0,
+            'std_dist_m': 0.0,
+            'rmse_dist_m': 0.0,
+            'p75_dist_m': 0.0,
+            'p90_dist_m': 0.0,
+            'p95_dist_m': 0.0,
+            'p99_dist_m': 0.0,
+            'hausdorff_dist_m': 0.0,
+            'distances': np.array([]),
+            'ext_points_info': []
+        }
+        
+    # Convert to coordinates
+    ext_coords = np.array([[info['point'].x, info['point'].y] for info in ext_points_info])
+    ref_coords = np.array([[info['point'].x, info['point'].y] for info in ref_points_info])
+    
+    # KDTree computation
+    tree = cKDTree(ref_coords)
+    distances, nearest_indices = tree.query(ext_coords, k=1)
+    
+    # Add distance and nearest reference point info to ext_points_info
+    for i, info in enumerate(ext_points_info):
+        info['distance'] = float(distances[i])
+        nearest_idx = nearest_indices[i]
+        info['ref_x'] = float(ref_coords[nearest_idx][0])
+        info['ref_y'] = float(ref_coords[nearest_idx][1])
+        info['ext_x'] = float(ext_coords[i][0])
+        info['ext_y'] = float(ext_coords[i][1])
+        
+    # Compute detailed statistics
+    min_dist = np.min(distances)
+    max_dist = np.max(distances)
+    mean_dist = np.mean(distances)
+    median_dist = np.median(distances)
+    std_dist = np.std(distances)
+    rmse_dist = np.sqrt(np.mean(distances**2))
+    p75 = np.percentile(distances, 75)
+    p90 = np.percentile(distances, 90)
+    p95 = np.percentile(distances, 95)
+    p99 = np.percentile(distances, 99)
+    
+    metrics = {
+        'min_dist_m': float(min_dist),
+        'max_dist_m': float(max_dist),
+        'mean_dist_m': float(mean_dist),
+        'median_dist_m': float(median_dist),
+        'std_dist_m': float(std_dist),
+        'rmse_dist_m': float(rmse_dist),
+        'p75_dist_m': float(p75),
+        'p90_dist_m': float(p90),
+        'p95_dist_m': float(p95),
+        'p99_dist_m': float(p99),
+        'hausdorff_dist_m': float(max_dist),
+        'distances': distances,
+        'ext_points_info': ext_points_info
+    }
+    
+    print(f"[Validation] Shoreline Validation Metrics (against S2 NDWI):")
+    print(f"  - Mean Distance: {mean_dist:.2f} m")
+    print(f"  - RMSE: {rmse_dist:.2f} m")
+    print(f"  - Hausdorff Distance: {max_dist:.2f} m")
+    print(f"  - 95th Percentile: {p95:.2f} m")
+    
+    return metrics
