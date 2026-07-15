@@ -18,7 +18,7 @@ from src.config import (
 from src.aoi import get_aoi_geometry, load_local_aoi
 from src.collection import create_seasonal_composite
 from src.classification import load_training_polygons, train_classifier, classify_image
-from src.shoreline import load_centerline, refine_classification, extract_shared_boundary
+from src.shoreline import load_centerline, refine_classification, extract_shared_boundary, clean_shoreline_graph
 
 def add_ee_layer(folium_map, ee_image_object, vis_params, name, opacity=1.0):
     map_id_dict = ee.Image(ee_image_object).getMapId(vis_params)
@@ -78,6 +78,12 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
     # Save verification metrics
     print(f"[Metrics] Segment count: {metrics['num_segments']}, Total length: {metrics['total_length_m']/1000:.2f} km")
     
+    # 7. Graph Cleaning (Phase 6)
+    cleaned_gdf = clean_shoreline_graph(shoreline_gdf)
+    out_cleaned_geojson_path = os.path.join(OUTPUT_DIR, f"shoreline_{year}_{season}_cleaned.geojson")
+    cleaned_gdf.to_file(out_cleaned_geojson_path, driver="GeoJSON")
+    print(f"[Phase 6] Saved cleaned shoreline GeoJSON to: {out_cleaned_geojson_path}")
+    
     # Initialize map
     m = folium.Map(location=[21.03, 105.85], zoom_start=11, control_scale=True)
     folium.TileLayer('openstreetmap', name='OpenStreetMap').add_to(m)
@@ -136,12 +142,31 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
             is_island = feature['properties']['is_island']
             color = '#e74c3c' if not is_island else '#f1c40f'  # Red for main banks, Yellow for islands
             weight = 1.2 if not is_island else 1.0
-            return {'color': color, 'weight': weight, 'opacity': 1.0}
+            return {'color': color, 'weight': weight, 'opacity': 0.7}
             
         folium.GeoJson(
             shoreline_wgs84,
             name="Raw Shoreline (Red: Banks, Yellow: Islands)",
             style_function=style_shoreline,
+            show=False,
+            popup=folium.GeoJsonPopup(fields=['id', 'length_m', 'is_island'])
+        ).add_to(m)
+        
+    # Cleaned shoreline (Phase 6)
+    if not cleaned_gdf.empty:
+        cleaned_wgs84 = cleaned_gdf.to_crs("EPSG:4326")
+        
+        # Color islands differently from banks
+        def style_cleaned_shoreline(feature):
+            is_island = feature['properties']['is_island']
+            color = '#1abc9c' if not is_island else '#e67e22'  # Teal for main banks, Orange for islands
+            weight = 2.0 if not is_island else 1.8
+            return {'color': color, 'weight': weight, 'opacity': 1.0}
+            
+        folium.GeoJson(
+            cleaned_wgs84,
+            name="Cleaned Shoreline (Teal: Banks, Orange: Islands)",
+            style_function=style_cleaned_shoreline,
             popup=folium.GeoJsonPopup(fields=['id', 'length_m', 'is_island'])
         ).add_to(m)
         
@@ -160,24 +185,33 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
         ).add_to(m)
         
     # Legend HTML
+    cleaned_len_km = cleaned_gdf.geometry.length.sum() / 1000.0 if not cleaned_gdf.empty else 0.0
     legend_html = f"""
     <div style="position: fixed; 
-                bottom: 100px; left: 10px; width: 340px; height: 310px; 
+                bottom: 100px; left: 10px; width: 350px; height: 420px; 
                 z-index:9999; font-size:12px; background-color:rgba(255, 255, 255, 0.95);
                 border: 2px solid grey; border-radius: 6px; padding: 10px;
                 box-shadow: 2px 2px 5px rgba(0,0,0,0.2); font-family: sans-serif;">
-        <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; text-align: center;">Phase 5 QC - {season.upper()} Season</h4>
+        <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; text-align: center;">Phase 5 & 6 QC - {season.upper()} Season</h4>
         <div style="display: flex; align-items: center; margin-bottom: 5px;">
             <div style="width: 16px; height: 16px; background-color: #2980b9; opacity: 0.3; margin-right: 8px;"></div>
             <span>Refined GEE Water Mask (Blue)</span>
         </div>
         <div style="display: flex; align-items: center; margin-bottom: 5px;">
-            <div style="width: 16px; height: 5px; background-color: #e74c3c; margin-right: 8px;"></div>
-            <span style="font-weight: bold; color: #e74c3c;">Main River Banks (Red)</span>
+            <div style="width: 16px; height: 5px; background-color: #1abc9c; margin-right: 8px;"></div>
+            <span style="font-weight: bold; color: #1abc9c;">Cleaned River Banks (Teal)</span>
         </div>
         <div style="display: flex; align-items: center; margin-bottom: 5px;">
-            <div style="width: 16px; height: 5px; background-color: #f1c40f; margin-right: 8px;"></div>
-            <span style="font-weight: bold; color: #d4ac0d;">Island Shorelines (Yellow)</span>
+            <div style="width: 16px; height: 5px; background-color: #e67e22; margin-right: 8px;"></div>
+            <span style="font-weight: bold; color: #e67e22;">Cleaned Islands (Orange)</span>
+        </div>
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            <div style="width: 16px; height: 5px; background-color: #e74c3c; opacity: 0.7; margin-right: 8px;"></div>
+            <span style="color: #e74c3c;">Raw River Banks (Red, Hidden)</span>
+        </div>
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            <div style="width: 16px; height: 5px; background-color: #f1c40f; opacity: 0.7; margin-right: 8px;"></div>
+            <span style="color: #d4ac0d;">Raw Islands (Yellow, Hidden)</span>
         </div>
         <div style="display: flex; align-items: center; margin-bottom: 5px;">
             <div style="width: 16px; height: 5px; border-top: 2px dashed #2ecc71; margin-right: 8px;"></div>
@@ -196,10 +230,12 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
             <span>Active Centerline (Purple)</span>
         </div>
         <hr style="margin: 4px 0 6px 0;">
-        <div><b>Phase 5 Metrics:</b></div>
-        <div style="margin-top: 3px;">Segments count: <b>{metrics['num_segments']}</b></div>
-        <div>Total Shoreline: <b>{metrics['total_length_m']/1000:.2f} km</b></div>
+        <div><b>Phase 5 (Raw) Metrics:</b></div>
+        <div style="margin-top: 2px;">Segments: <b>{metrics['num_segments']}</b> | Length: <b>{metrics['total_length_m']/1000:.2f} km</b></div>
         <div>QC Passed: <b style="color: {'green' if metrics['qc_passed'] else 'red'};">{'YES' if metrics['qc_passed'] else 'NO'}</b></div>
+        <hr style="margin: 4px 0 6px 0;">
+        <div><b>Phase 6 (Cleaned) Metrics:</b></div>
+        <div style="margin-top: 2px;">Segments: <b>{len(cleaned_gdf)}</b> | Length: <b>{cleaned_len_km:.2f} km</b></div>
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))

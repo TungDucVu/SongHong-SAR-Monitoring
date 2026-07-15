@@ -342,3 +342,249 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
     print(f"[Phase 5] Completed in {runtime:.2f}s. Extracted {num_segments} shoreline segments, total length: {total_length/1000:.2f} km.")
     water_dissolved_gdf = gpd.GeoDataFrame(geometry=[water_dissolved], crs="EPSG:32648")
     return shoreline_gdf, water_dissolved_gdf, metrics
+
+def clean_shoreline_graph(shoreline_gdf, config_dict=None):
+    """
+    Implements Phase 6 Graph Cleaning:
+      1. Duplicate removal
+      2. Linemerge
+      3. Endpoint/Edge snapping (snap_threshold)
+      4. Iterative spur pruning (prune_threshold)
+      5. Final linemerge & length filtering (min_length)
+    """
+    if shoreline_gdf.empty:
+        return shoreline_gdf
+        
+    import networkx as nx
+    from shapely.ops import linemerge
+    from shapely.geometry import Point, LineString
+    
+    # Get config parameters
+    if config_dict is None:
+        from src.config import SHORELINE_CONFIG
+        config_dict = SHORELINE_CONFIG
+        
+    snap_threshold = config_dict.get('snap_threshold', 150.0)
+    prune_threshold = config_dict.get('prune_threshold', 200.0)
+    min_length = config_dict.get('min_length', 1000.0)
+    
+    year = shoreline_gdf.iloc[0].get('year', 2024)
+    season = shoreline_gdf.iloc[0].get('season', 'dry')
+    version = shoreline_gdf.iloc[0].get('processing_version', '1.0')
+    
+    # Extract LineString geometries
+    geoms = list(shoreline_gdf.geometry)
+    
+    # Step 1: Duplicate Removal
+    unique_geoms = []
+    seen = set()
+    for g in geoms:
+        if g.is_empty or g.length < 1.0:
+            continue
+        coords = list(g.coords)
+        signature = (round(coords[0][0], 3), round(coords[0][1], 3), 
+                     round(coords[-1][0], 3), round(coords[-1][1], 3), 
+                     round(g.length, 3))
+        signature_rev = (round(coords[-1][0], 3), round(coords[-1][1], 3), 
+                         round(coords[0][0], 3), round(coords[0][1], 3), 
+                         round(g.length, 3))
+        if signature not in seen and signature_rev not in seen:
+            seen.add(signature)
+            unique_geoms.append(g)
+            
+    # Step 2: Linemerge
+    merged = linemerge(unique_geoms)
+    lines = []
+    if merged.geom_type == 'LineString':
+        lines.append(merged)
+    elif merged.geom_type in ('MultiLineString', 'GeometryCollection'):
+        for g in merged.geoms:
+            if g.geom_type == 'LineString':
+                lines.append(g)
+                
+    # Step 3: Gap Snapping (Endpoint-to-Endpoint & Endpoint-to-Edge)
+    for snap_round in range(3):  # repeat a few times for cascading snaps
+        def get_node(pt):
+            return (round(pt[0], 3), round(pt[1], 3))
+            
+        node_degrees = {}
+        for line in lines:
+            start_pt = line.coords[0]
+            end_pt = line.coords[-1]
+            n_start = get_node(start_pt)
+            n_end = get_node(end_pt)
+            
+            node_degrees[n_start] = node_degrees.get(n_start, 0) + 1
+            node_degrees[n_end] = node_degrees.get(n_end, 0) + 1
+            
+        dangling_nodes = [node for node, deg in node_degrees.items() if deg == 1]
+        if not dangling_nodes:
+            break
+            
+        snapped_nodes = {}  # map old node -> new node coordinates
+        
+        for d_node in dangling_nodes:
+            d_point = Point(d_node)
+            best_target = None
+            best_dist = float('inf')
+            target_type = None  # 'endpoint' or 'edge'
+            best_edge_idx = None
+            best_proj_point = None
+            
+            # Check other dangling nodes
+            for other_node in dangling_nodes:
+                if other_node == d_node:
+                    continue
+                dist = d_point.distance(Point(other_node))
+                if dist < best_dist and dist <= snap_threshold:
+                    best_dist = dist
+                    best_target = other_node
+                    target_type = 'endpoint'
+                    
+            # Check edges
+            for idx, line in enumerate(lines):
+                l_start = get_node(line.coords[0])
+                l_end = get_node(line.coords[-1])
+                if l_start == d_node or l_end == d_node:
+                    if line.length < 50.0:
+                        continue
+                
+                dist = line.distance(d_point)
+                if dist < best_dist and dist <= snap_threshold:
+                    proj_dist = line.project(d_point)
+                    proj_pt = line.interpolate(proj_dist)
+                    proj_node = get_node((proj_pt.x, proj_pt.y))
+                    if proj_node != l_start and proj_node != l_end:
+                        best_dist = dist
+                        best_target = proj_pt
+                        target_type = 'edge'
+                        best_edge_idx = idx
+                        best_proj_point = (proj_pt.x, proj_pt.y)
+                        
+            # Execute the snapping
+            if best_target is not None:
+                if target_type == 'endpoint':
+                    snapped_nodes[d_node] = best_target
+                elif target_type == 'edge':
+                    target_line = lines[best_edge_idx]
+                    coords = list(target_line.coords)
+                    insert_idx = -1
+                    for i in range(len(coords) - 1):
+                        seg = LineString([coords[i], coords[i+1]])
+                        dist_to_seg = seg.distance(Point(best_proj_point))
+                        if dist_to_seg < 0.01:
+                            insert_idx = i + 1
+                            break
+                    if insert_idx != -1:
+                        new_coords = coords[:insert_idx] + [best_proj_point] + coords[insert_idx:]
+                        lines[best_edge_idx] = LineString(new_coords)
+                        snapped_nodes[d_node] = best_proj_point
+                        
+        if not snapped_nodes:
+            break
+            
+        new_lines = []
+        for line in lines:
+            coords = list(line.coords)
+            start_node = get_node(coords[0])
+            end_node = get_node(coords[-1])
+            
+            modified = False
+            if start_node in snapped_nodes:
+                coords[0] = snapped_nodes[start_node]
+                modified = True
+            if end_node in snapped_nodes:
+                coords[-1] = snapped_nodes[end_node]
+                modified = True
+                
+            if modified:
+                new_lines.append(LineString(coords))
+            else:
+                new_lines.append(line)
+        lines = new_lines
+        
+        merged = linemerge(lines)
+        lines = []
+        if merged.geom_type == 'LineString':
+            lines.append(merged)
+        elif merged.geom_type in ('MultiLineString', 'GeometryCollection'):
+            for g in merged.geoms:
+                if g.geom_type == 'LineString':
+                    lines.append(g)
+
+    # Step 4: Iterative Spur Pruning
+    pruned_count = 0
+    while True:
+        G = nx.MultiGraph()
+        def get_node(pt):
+            return (round(pt[0], 3), round(pt[1], 3))
+            
+        for idx, line in enumerate(lines):
+            n_start = get_node(line.coords[0])
+            n_end = get_node(line.coords[-1])
+            G.add_edge(n_start, n_end, idx=idx, length=line.length, geom=line)
+            
+        to_prune_indices = set()
+        for node in G.nodes():
+            deg = G.degree(node)
+            if deg == 1:
+                edge_data = list(G.edges(node, data=True))[0]
+                u, v, attr = edge_data
+                other_node = v if u == node else u
+                other_deg = G.degree(other_node)
+                
+                if other_deg >= 3 and attr['length'] < prune_threshold:
+                    to_prune_indices.add(attr['idx'])
+                    
+        if not to_prune_indices:
+            break
+            
+        lines = [line for idx, line in enumerate(lines) if idx not in to_prune_indices]
+        pruned_count += len(to_prune_indices)
+        
+        merged = linemerge(lines)
+        lines = []
+        if merged.geom_type == 'LineString':
+            lines.append(merged)
+        elif merged.geom_type in ('MultiLineString', 'GeometryCollection'):
+            for g in merged.geoms:
+                if g.geom_type == 'LineString':
+                    lines.append(g)
+                    
+    print(f"[Phase 6] Pruned {pruned_count} minor dangling spurs.")
+
+    # Step 5: Final Merge & Length Filtering
+    merged = linemerge(lines)
+    final_lines = []
+    if merged.geom_type == 'LineString':
+        final_lines.append(merged)
+    elif merged.geom_type in ('MultiLineString', 'GeometryCollection'):
+        for g in merged.geoms:
+            if g.geom_type == 'LineString':
+                final_lines.append(g)
+                
+    filtered_lines = [line for line in final_lines if line.length >= min_length]
+    
+    cleaned_features = []
+    for idx, line in enumerate(filtered_lines):
+        # Attribute assignment: determine if it's an island
+        line_center = line.interpolate(line.length / 2.0)
+        closest_row = shoreline_gdf.iloc[shoreline_gdf.distance(line_center).argmin()]
+        is_island = bool(closest_row['is_island'])
+            
+        feat = {
+            'geometry': line,
+            'id': f"shoreline_{year}_{season}_cleaned_{idx}",
+            'bank_type': 'unknown',
+            'length_m': float(line.length),
+            'is_island': is_island,
+            'year': int(year),
+            'season': season,
+            'source': 'S1',
+            'processing_version': version
+        }
+        cleaned_features.append(feat)
+        
+    cleaned_gdf = gpd.GeoDataFrame(cleaned_features, crs="EPSG:32648")
+    print(f"[Phase 6] Completed. Reduced segment count from {len(shoreline_gdf)} to {len(cleaned_gdf)}. Cleaned shoreline length: {cleaned_gdf.geometry.length.sum()/1000:.2f} km.")
+    return cleaned_gdf
