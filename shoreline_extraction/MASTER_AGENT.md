@@ -18,7 +18,7 @@ graph TD
     P1[Phase 1: Preprocessing] -->|Normalized S1 Image| P2[Phase 2: Feature Engineering]
     P2 -->|10-12 Band Stack| P3[Phase 3: RF Classification]
     P3 -->|Raw Raster Mask| P4[Phase 4: Raster Refinement]
-    P4 -->|Refined Water/Sand Masks| P5[Phase 5: Boundary Extraction]
+    P4 -->|Refined Water Mask| P5["Phase 5: Topologically-Constrained Water Boundary Extraction"]
     P5 -->|Raw Shoreline Polylines| P6[Phase 6: Graph Cleaning]
     P6 -->|Cleaned Polylines| P7[Phase 7: Smoothing & Simplification]
     P7 -->|Smoothed Shoreline| P8[Phase 8: Validation & HTML QC]
@@ -50,11 +50,11 @@ To ensure compatibility between phases, the following data specifications are en
   * `4`: Vegetation
 * **Binary Refinement Masks (Phase 4 & 5)**:
   * **Water Mask**: Binary raster where $1 = \text{Water}$ (Class 1) and $0 = \text{All others}$.
-  * **Sand Mask**: Binary raster where $1 = \text{Sand}$ (Class 2) and $0 = \text{All others}$.
+  * **Sand Mask**: Binary raster where $1 = \text{Sand}$ (Class 2) and $0 = \text{All others}$ (used strictly for bank attributes and statistics).
 
 ### C. Vector Data Contracts
-* **Shared Boundary Output**: GeoJSON or `ee.FeatureCollection` of `LineString` elements representing the contact boundary between the main water body and sandbars.
-* **Smoothed Shoreline Output**: A clean, single polyline or a set of continuous LineString segments representing the final bank lines.
+* **Shoreline Boundary Output**: GeoJSON or `ee.FeatureCollection` of `LineString` elements representing the exterior and island boundaries of the main river water body.
+* **Smoothed Shoreline Output**: A clean, simplified, topology-preserving set of LineString segments representing the final bank and island shorelines.
 
 ---
 
@@ -68,9 +68,9 @@ When implementing the pipeline, agents must construct the following core files i
   * Implements Phase 3 (Random Forest model training and classification).
 * [ ] **`src/shoreline.py`**:
   * Implements Phase 4 (raster morphological opening/closing with disk kernels, connected component isolation).
-  * Implements Phase 5 (polygonization & vector intersection).
-  * Implements Phase 6 (network graph pruning and snapping).
-  * Implements Phase 7 (Chaikin's corner-cutting and Douglas-Peucker simplification).
+  * Implements Phase 5 (polygonization & centerline-constrained water boundary extraction).
+  * Implements Phase 6 (network graph cleaning: duplicate removal, linemerge, snap, prune, merge again, length filter).
+  * Implements Phase 7 (Chaikin's corner-cutting and Douglas-Peucker simplification preserving topology).
 * [x] **`src/preprocessing.py`**:
   * Houses the Refined Lee filter and border-noise removal routines (already completed).
 

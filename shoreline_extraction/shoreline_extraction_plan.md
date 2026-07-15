@@ -89,37 +89,47 @@ Post-processes the raster mask to isolate clean water/sand corridors.
   * Eliminate all other disconnected waterbodies (such as inland aquaculture ponds, urban lakes, and minor agricultural canals) that do not belong to the active river system.
 * > **CHECKPOINT 4**: Verify that the water component count dropped by $\ge 95\%$. Visually inspect that inland lakes/ponds outside the dykes are completely masked.
 
-### Phase 5: Water–Sand Shared Boundary Extraction
-Extracts the raw shoreline interface while preventing topological artifacts.
-* **Sub-phase 5.1: Polygonization**: Convert the refined Water and Sand raster classes into vector polygons.
-* **Sub-phase 5.2: Main Corridor Extraction**: Extract the shared boundary line strictly at the interface touching the main river corridor:
-  $$\text{Shoreline} = \partial(\text{Main\_River\_Water\_Polygon}) \cap \partial(\text{Sand\_Polygon})$$
-  * This topological filter extracts **only** the water-sand interfaces touching the main river channel. It discards isolated sandbar boundaries, internal holes (lake boundaries/polygon rings) inside sandbars, and island boundaries that do not connect to the main river flow.
-* > **CHECKPOINT 5**: Ensure no closed loops or boundaries are generated along concrete embankments, vegetated banks, or inland ponds that do not contain sand.
+### Phase 5: Topologically-Constrained Water Boundary Extraction
+Extracts the raw shoreline interface from the refined main river water body.
+* **Sub-phase 5.1: Polygonization**: Convert the refined Water raster mask into vector polygons.
+* **Sub-phase 5.2: Main Water Polygon Selection**: Retain water polygons that intersect the active centerline of the Red River, dissolved and filtered such that:
+  $$\text{Polygon Area} \ge \text{min\_main\_water\_area}$$
+  or belonging to the largest connected river corridor.
+* **Sub-phase 5.3: Boundary Extraction**: Extract the exterior boundary (outer shell) of the main water polygon as the primary river banks, and interior rings as river islands:
+  $$\text{Shoreline} = \partial(\text{Main\_Water\_Polygon})$$
+  Exclude any interior rings representing islands that are smaller than `min_island_area` or represent raster artifacts.
+* > **CHECKPOINT 5**: Verify Phase 5 QC constraints: no empty geometry, valid polygons, no self-intersections, and no duplicate segments. All shorelines must belong to the active river corridor.
 
 ### Phase 6: Shoreline Cleaning (Graph Optimization)
-Fixes topological flaws in the vector lines.
-* **Sub-phase 6.1: Graph Assembly**: Convert polylines into a network graph.
-* **Sub-phase 6.2: Pruning**: Delete dead-end spurs and collapse closed loops.
-* **Sub-phase 6.3: Network Merging**: Keep the longest connected network and snap adjacent endpoints to bridge gaps.
-* > **CHECKPOINT 6**: Rather than selecting fixed thresholds (like pruning spurs $< 500\text{ m}$ or snapping $< 150\text{ m}$) arbitrarily, **parameters must be determined through empirical calibration using validation reaches or optimized via sensitivity analysis (grid search)**. Verify that the number of disconnected shoreline segments is minimized (ideally $\le 5$ segments total).
+Fixes topological flaws and cleans the raw shoreline network.
+* **Sub-phase 6.1: Graph Assembly**: Convert raw LineStrings into a network graph (`networkx.Graph`) with endpoints as nodes.
+* **Sub-phase 6.2: Cleaning Sequence**: Execute graph cleaning in the exact sequence:
+  1. **Duplicate removal**: Discard overlapping or identical line segments.
+  2. **Linemerge**: Dissolve and merge continuous edges.
+  3. **Gap Snapping**: Snap dangling endpoints to adjacent endpoints or edges within `snap_threshold` (adjusting/extending coordinates without adding straight segment edges).
+  4. **Iterative Pruning**: Iteratively prune dangling dead-end edges shorter than `prune_threshold`.
+  5. **Length Filter**: Discard minor disconnected segments and keep shorelines longer than `min_length` to preserve main banks and persistent river islands.
+* > **CHECKPOINT 6**: Snapping and pruning parameters must be parameterized in `src/config.py` as `SHORELINE_CONFIG` to support empirical calibration. Verify that the number of disconnected shoreline segments is minimized, while valid island shorelines are preserved.
 
 ### Phase 7: Shoreline Smoothing & Simplification
 Smooths and simplifies the lines for visualization and vector optimization.
 * **Sub-phase 7.1: Chaikin Smoothing**:
   * Apply **Chaikin Smoothing** (2–3 iterations of corner-cutting to round pixelated corners) **BEFORE** applying **Douglas-Peucker Simplification**.
   * *Rationale*: Chaikin increases vertex density by interpolating and rounding the pixelated staircase steps of the raster-derived polyline. Douglas-Peucker (DP) is subsequently applied to reduce the vertex count by removing redundant collinear vertices along the smoothed path. This sequence ensures a physically plausible, curved shoreline without losing geometric shape.
-* **Sub-phase 7.2: Douglas-Peucker Simplification**: Apply DP simplification with a small tolerance (2–5 m) to optimize vertex density.
-* > **CHECKPOINT 7**: Confirm vertex count reduction of $\ge 60\%$ while keeping the maximum Hausdorff deviation between raw and smoothed lines approximately one pixel ($\approx 10\text{ m}$).
+* **Sub-phase 7.2: Douglas-Peucker Simplification**: Apply DP simplification with `preserve_topology=True` and a tolerance parameter (e.g. 1.0 m) to optimize vertex density.
+* > **CHECKPOINT 7**: Log vertex count reduction percentage. Verify that the maximum Hausdorff deviation between raw and smoothed lines is within $\le 15\text{ m}$ (approximately one pixel size).
 
 ### Phase 8: Final Quality Control and Shoreline Validation
 Verifies the final outputs against reference data using quantitative spatial metrics.
 * **Sub-phase 8.1: Visual Overlay Check**: Overlay shorelines on the raw SAR composite and cloud-free Sentinel-2 imagery.
-* **Sub-phase 8.2: Validation Metrics**: Compute shoreline-specific positional accuracy against high-resolution reference shorelines:
-    * **Mean Distance**: Average offset between extracted and reference shorelines.
-    * **Root Mean Square Error (RMSE)**: Standard metric for boundary offset variance.
-    * **Hausdorff Distance**: Measures the maximum local deviation.
-    * **95th Percentile Distance**: Represents the upper bound of positional error.
+* **Sub-phase 8.2: Validation Metrics**: Compute shoreline-specific positional accuracy against high-resolution reference shorelines (derived from cloud-free Sentinel-2 NDWI composite):
+    * **Resampling**: Both the extracted and reference shorelines are resampled to a uniform **5m spacing** to ensure vertex-density independence.
+    * **Nearest-Neighbor Distance**: For each resampled point on the extracted shoreline, the Euclidean distance to the nearest point on the resampled reference shoreline is calculated.
+    * **Calculated Metrics**:
+      * **Mean Distance**: Average offset between extracted and reference shorelines.
+      * **Root Mean Square Error (RMSE)**: Standard metric for boundary offset variance.
+      * **Hausdorff Distance**: Measures the maximum local deviation.
+      * **95th Percentile Distance**: Represents the upper bound of positional error.
 * **Sub-phase 8.3: Manual Quality Control (Interactive Overlay Sheet)**:
   * **Interactive Map Sheet (Leaflet/Folium)**:
     * Backgrounds: True-color optical (S2) and raw greyscale SAR ($VV$).

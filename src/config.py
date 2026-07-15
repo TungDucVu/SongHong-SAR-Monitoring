@@ -158,3 +158,16 @@ SHORELINE_ORIENTATION_THRESHOLD = 0.5
 SHORELINE_BANK_SNAP_DISTANCE = 150.0
 # Minimum branch length in meters for bank graph pruning
 SHORELINE_BANK_PRUNE_LENGTH = 200.0
+
+# Unified Shoreline Configuration for Phases 5 - 8
+SHORELINE_CONFIG = {
+    'snap_threshold': SHORELINE_BANK_SNAP_DISTANCE,      # 150.0 m
+    'prune_threshold': SHORELINE_BANK_PRUNE_LENGTH,      # 200.0 m
+    'dp_tolerance': SHORELINE_SIMPLIFY_TOLERANCE,       # 1.0 m
+    'chaikin_iterations': SHORELINE_SMOOTH_ITERATIONS,   # 3
+    'min_length': 1000.0,                               # Minimum shoreline segment length (1 km)
+    'min_island_area': 10000.0,                         # Minimum island area (1 ha)
+    'min_main_water_area': 100000.0,                    # Minimum main channel area (10 ha)
+    'min_centerline_intersection': 1000.0,              # Minimum centerline intersection length (1 km)
+}
+
