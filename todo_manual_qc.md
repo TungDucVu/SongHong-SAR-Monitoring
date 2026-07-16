@@ -48,5 +48,13 @@ Verify that the following files exist in the `outputs/` directory and have corre
 ---
 
 ## 4. GitHub Verification
+*   [x] Verify that all code changes (`src/shoreline.py`, `scripts/extract_research_shoreline.py`) and initial checklist are committed and successfully merged to the `main` branch.
 
-- [ ] Verify that all code changes (`src/shoreline.py`, `scripts/extract_research_shoreline.py`) and this checklist are committed and successfully pushed to the repository branch on GitHub.
+---
+
+## 5. Update Project Documentation
+*   [ ] **Document Refinement Upgrades**:
+    *   Document the **manual bridge masking** workflow (decoupling from Overpass API, editing with `tools/digitize_bridges.html`).
+    *   Document the **multi-criteria island filtering** (circularity threshold $\ge 0.8$, Sentinel-2 overlap threshold $\ge 0.5$).
+    *   Document the **active learning hotspot bootstrapping** workflow (`scripts/expand_training_polys.py` querying S2 NDWI/NDVI/NDBI metrics to auto-expand training polygons).
+    *   Update relevant phase-specific markdown files (e.g. `shoreline_extraction/MASTER_AGENT.md` or `shoreline_extraction/shoreline_extraction_plan.md`) with the final pipeline architecture.
