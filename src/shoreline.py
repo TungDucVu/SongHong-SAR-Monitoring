@@ -260,7 +260,7 @@ def refine_classification(classified, aoi_geometry, centerline_fc=None, open_rad
     
     return water_mask_refined, sand_mask_refined, qc_stats
 
-def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=2024, season='dry', version='1.0'):
+def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=2024, season='dry', version='1.0', bridge_mask=None, s2_water_poly=None):
     """
     Implements Phase 5: Topologically-Constrained Water Boundary Extraction.
     
@@ -344,6 +344,8 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
     min_main_water_area = SHORELINE_CONFIG.get('min_main_water_area', 100000.0)
     min_island_area = SHORELINE_CONFIG.get('min_island_area', 10000.0)
     min_centerline_intersection = SHORELINE_CONFIG.get('min_centerline_intersection', 1000.0)
+    island_circularity_threshold = SHORELINE_CONFIG.get('island_circularity_threshold', 0.8)
+    island_s2_overlap_threshold = SHORELINE_CONFIG.get('island_s2_overlap_threshold', 0.5)
     
     # 2. Main Water Polygon Selection
     # Calculate centerline intersection length for each polygon in EPSG:32648
@@ -372,6 +374,10 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
     from shapely.ops import unary_union as shapely_unary_union
     water_dissolved = make_valid(shapely_unary_union(selected_polys))
     
+    # Connect water across manual bridge geometries if mask is provided
+    if bridge_mask is not None:
+        water_dissolved = connect_water_across_bridges(water_dissolved, bridge_mask)
+        
     # Ensure geometry validity
     invalid_fixed = 0
     if not water_dissolved.is_valid:
@@ -382,6 +388,8 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
     raw_lines = []
     
     def process_polygon(poly):
+        import math
+        import numpy as np
         if poly.is_empty:
             return
         # Exterior boundary (outer bank)
@@ -391,8 +399,32 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
         for interior in poly.interiors:
             if not interior.is_empty:
                 island_poly = Polygon(interior)
-                if island_poly.area >= min_island_area:
-                    raw_lines.append((interior, True))
+                area = island_poly.area
+                if area >= min_island_area:
+                    # Compute circularity: (4 * pi * area) / perimeter^2
+                    perimeter = interior.length
+                    circularity = (4.0 * math.pi * area) / (perimeter ** 2) if perimeter > 0 else 0.0
+                    
+                    # Compute S2 water overlap
+                    overlap_ratio = 0.0
+                    if s2_water_poly is not None:
+                        try:
+                            intersection_area = island_poly.intersection(s2_water_poly).area
+                            overlap_ratio = intersection_area / area
+                        except Exception as e:
+                            print(f"[Warning] Failed to compute island S2 overlap: {e}")
+                            overlap_ratio = 0.0
+                            
+                    is_false_positive = False
+                    if circularity >= island_circularity_threshold:
+                        is_false_positive = True
+                        print(f"[Island Filter] Filtered out island area={area:.1f}m2 due to high circularity: {circularity:.2f} >= {island_circularity_threshold}")
+                    elif overlap_ratio >= island_s2_overlap_threshold:
+                        is_false_positive = True
+                        print(f"[Island Filter] Filtered out island area={area:.1f}m2 due to high S2 water overlap: {overlap_ratio:.2f} >= {island_s2_overlap_threshold}")
+                        
+                    if not is_false_positive:
+                        raw_lines.append((interior, True))
                     
     if water_dissolved.geom_type == 'Polygon':
         process_polygon(water_dissolved)
@@ -879,7 +911,7 @@ def smooth_and_simplify_shoreline(cleaned_gdf, config_dict=None):
     
     return smoothed_gdf, metrics
 
-def generate_validation_shoreline_s2(year, season, aoi_geometry, config_dict=None):
+def generate_validation_shoreline_s2(year, season, aoi_geometry, bridge_mask=None, config_dict=None):
     """
     Implements Phase 8: Sentinel-2 NDWI reference shoreline extraction.
     
@@ -1002,6 +1034,10 @@ def generate_validation_shoreline_s2(year, season, aoi_geometry, config_dict=Non
     from shapely.ops import unary_union as shapely_unary_union
     water_dissolved = make_valid(shapely_unary_union(selected_polys))
     
+    # Connect water across manual bridge geometries if mask is provided
+    if bridge_mask is not None:
+        water_dissolved = connect_water_across_bridges(water_dissolved, bridge_mask)
+        
     if not water_dissolved.is_valid:
         water_dissolved = make_valid(water_dissolved)
         
@@ -1047,7 +1083,7 @@ def generate_validation_shoreline_s2(year, season, aoi_geometry, config_dict=Non
         
     ref_gdf = gpd.GeoDataFrame(features, crs="EPSG:32648")
     print(f"[Phase 8] Extracted S2 NDWI reference shoreline. {len(ref_gdf)} segments, total length: {ref_gdf.geometry.length.sum()/1000:.2f} km")
-    return ref_gdf
+    return ref_gdf, water_dissolved
 
 def validate_shoreline(extracted_gdf, reference_gdf):
     """
@@ -1185,3 +1221,158 @@ def validate_shoreline(extracted_gdf, reference_gdf):
     print(f"  - 95th Percentile: {p95:.2f} m")
     
     return metrics
+
+
+def load_manual_bridges(bridges_path=None):
+    """
+    Loads manual bridge polygons from data/bridges.geojson as a GeoDataFrame.
+    Reprojects to UTM Zone 48N (EPSG:32648).
+    """
+    if bridges_path is None:
+        # Default path relative to this file's directory (src/shoreline.py)
+        bridges_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'bridges.geojson')
+        
+    if not os.path.exists(bridges_path):
+        raise FileNotFoundError(f"Manual bridges GeoJSON not found at: {bridges_path}. "
+                                "Please run scripts/initialize_bridges.py or use the digitization tool first.")
+                                
+    bridges_gdf = gpd.read_file(bridges_path)
+    
+    # Ensure CRS is reprojected to EPSG:32648
+    if bridges_gdf.crs is None:
+        bridges_gdf.set_crs("EPSG:4326", inplace=True)
+    if bridges_gdf.crs != "EPSG:32648":
+        bridges_gdf = bridges_gdf.to_crs("EPSG:32648")
+        
+    return bridges_gdf
+
+
+def calibrate_s1_water_mask(classified, composite, s2_ref_gdf):
+    """
+    Calibrates S1 water mask using S2 shoreline as ground truth...
+    """
+    if s2_ref_gdf is None or s2_ref_gdf.empty:
+        print("[Calibration] No S2 reference shoreline available. Skipping calibration.")
+        return classified
+        
+    print("[Calibration] Calibrating S1 water mask using S2 shoreline as ground truth...")
+    
+    # 1. Project S2 shoreline to WGS84
+    s2_wgs84 = s2_ref_gdf.to_crs("EPSG:4326")
+    
+    # Extract points along the line at ~10m spacing
+    import numpy as np
+    from shapely.geometry import Point
+    import geopandas as gpd
+    import ee
+    
+    pts_list = []
+    spacing = 10.0 # in meters (approx 0.00009 degrees)
+    
+    for idx, row in s2_wgs84.iterrows():
+        geom = row.geometry
+        if geom.is_empty:
+            continue
+        # Calculate length of the geometry in UTM (EPSG:32648)
+        utm_geom = s2_ref_gdf.loc[idx].geometry
+        length_m = utm_geom.length
+        distances = np.arange(0, length_m, spacing)
+        if len(distances) == 0:
+            distances = [0.0]
+            
+        for d in distances:
+            if d < utm_geom.length:
+                pt_utm = utm_geom.interpolate(d)
+                # Convert back to WGS84
+                pt_series = gpd.GeoSeries([pt_utm], crs="EPSG:32648").to_crs("EPSG:4326")
+                pt_wgs = pt_series.iloc[0]
+                pts_list.append((pt_wgs.x, pt_wgs.y))
+                
+    print(f"[Calibration] Extracted {len(pts_list)} boundary points along S2 shoreline.")
+    
+    if len(pts_list) < 10:
+        print("[Calibration] Too few points along S2 shoreline. Skipping calibration.")
+        return classified
+        
+    # Limit points to max 2000 to avoid GEE request limits, sample uniformly
+    if len(pts_list) > 2000:
+        step = len(pts_list) // 2000
+        pts_list = pts_list[::step][:2000]
+        
+    # 2. Build GEE FeatureCollection
+    ee_features = []
+    for lon, lat in pts_list:
+        ee_features.append(ee.Feature(ee.Geometry.Point([lon, lat])))
+        
+    pts_fc = ee.FeatureCollection(ee_features)
+    
+    # 3. Sample S1 backscatter values
+    sampled = composite.select(['VV', 'VH']).sampleRegions(
+        collection=pts_fc,
+        scale=10,
+        tileScale=16
+    )
+    
+    try:
+        vv_vals = sampled.aggregate_array('VV').getInfo()
+        vh_vals = sampled.aggregate_array('VH').getInfo()
+    except Exception as e:
+        print(f"[Calibration Warning] GEE sampling failed: {e}. Using default thresholds.")
+        vv_vals = []
+        vh_vals = []
+        
+    # Clean up null values
+    vv_vals = [v for v in vv_vals if v is not None]
+    vh_vals = [v for v in vh_vals if v is not None]
+    
+    # 4. Calculate thresholds (with robust clamping to prevent crazy outliers)
+    # Defaults: VV = -16.0, VH = -22.0
+    if len(vv_vals) > 10:
+        vv_cal = float(np.median(vv_vals))
+        # Clamp between -19.0 and -13.0
+        vv_cal = max(-19.0, min(-13.0, vv_cal))
+    else:
+        vv_cal = -16.0
+        
+    if len(vh_vals) > 10:
+        vh_cal = float(np.median(vh_vals))
+        # Clamp between -25.0 and -19.0
+        vh_cal = max(-25.0, min(-19.0, vh_cal))
+    else:
+        vh_cal = -22.0
+        
+    print(f"[Calibration Results] Calibrated thresholds: VV = {vv_cal:.2f} dB, VH = {vh_cal:.2f} dB.")
+    
+    # 5. Apply correction to classified image
+    # If VV <= vv_cal AND VH <= vh_cal -> set class to 1 (Water)
+    vv_below = composite.select('VV').lte(vv_cal)
+    vh_below = composite.select('VH').lte(vh_cal)
+    s2_guided_water = vv_below.And(vh_below)
+    
+    # Correct: where s2_guided_water is 1, return 1, else return classified
+    calibrated_classified = classified.where(s2_guided_water, 1)
+    
+    return calibrated_classified
+
+
+def connect_water_across_bridges(water_geom, bridge_mask):
+    """
+    Connects water polygons across bridges to prevent the shoreline from following
+    bridge structures (Task 9).
+    Formula: W' = W cup (close(W, R) cap B)
+    """
+    if bridge_mask is None or bridge_mask.is_empty or water_geom.is_empty:
+        return water_geom
+        
+    # close(W, R): morphological closing with R=35m buffer
+    closed_water = water_geom.buffer(35.0).buffer(-35.0)
+    
+    # close(W, R) cap B
+    bridge_connections = closed_water.intersection(bridge_mask)
+    
+    # W cup (close(W, R) cap B)
+    from shapely.validation import make_valid
+    updated_water = make_valid(water_geom.union(bridge_connections))
+    
+    return updated_water
+

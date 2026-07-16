@@ -126,9 +126,9 @@ EXPECTED_LAND_VV_MIN = -10.0
 
 # --- Shoreline Extraction Parameters ---
 # Kernel size in pixels for morphological opening (clean noise)
-SHORELINE_OPEN_SIZE = 2
+SHORELINE_OPEN_SIZE = 1
 # Kernel size in pixels for morphological closing (fill gaps)
-SHORELINE_CLOSE_SIZE = 3
+SHORELINE_CLOSE_SIZE = 2
 # Minimum component area in pixels to keep (1000 pixels = 10 ha)
 SHORELINE_MIN_COMPONENT_AREA = 1000
 # Minimum hole area in pixels to fill
@@ -138,7 +138,7 @@ SHORELINE_SNAP_DISTANCE = 15.0
 # Number of refinements for Chaikin's smoothing
 SHORELINE_SMOOTH_ITERATIONS = 3
 # Tolerance in meters for Douglas-Peucker simplification
-SHORELINE_SIMPLIFY_TOLERANCE = 1.0
+SHORELINE_SIMPLIFY_TOLERANCE = 0.5
 # Minimum branch length in meters for pruning dead ends in graph
 SHORELINE_MIN_BRANCH_LENGTH = 100.0
 
@@ -169,5 +169,7 @@ SHORELINE_CONFIG = {
     'min_island_area': 10000.0,                         # Minimum island area (1 ha)
     'min_main_water_area': 100000.0,                    # Minimum main channel area (10 ha)
     'min_centerline_intersection': 1000.0,              # Minimum centerline intersection length (1 km)
+    'island_circularity_threshold': 0.8,                # Maximum circularity for islands (above this are considered false-positive circular artifacts/ponds)
+    'island_s2_overlap_threshold': 0.5,                 # Maximum overlap ratio with S2 water mask (above this are considered false-positive islands that should be water)
 }
 

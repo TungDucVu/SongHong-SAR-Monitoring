@@ -25,7 +25,7 @@ from src.shoreline import (
     get_continuous_centerline, load_centerline, refine_classification,
     extract_shared_boundary, clean_shoreline_graph,
     smooth_and_simplify_shoreline, generate_validation_shoreline_s2,
-    validate_shoreline
+    validate_shoreline, load_manual_bridges, calibrate_s1_water_mask
 )
 
 def classify_bank_type(line_geom, centerline_geom, is_island):
@@ -355,6 +355,17 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
     # 1. Create seasonal composite
     composite = create_seasonal_composite(year, season, aoi_geometry)
     
+    # 1b. Load manual bridges and build bridge mask inside River Corridor
+    bridges_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'bridges.geojson')
+    bridges_gdf = load_manual_bridges(bridges_path)
+    cl_linestring = get_continuous_centerline()
+    cl_gdf = gpd.GeoDataFrame(geometry=[cl_linestring], crs="EPSG:4326").to_crs("EPSG:32648")
+    corridor_poly = cl_gdf.geometry.buffer(2000).unary_union
+    river_bridge_mask = bridges_gdf.geometry.buffer(0).unary_union.intersection(corridor_poly)
+    
+    # 1c. Generate Sentinel-2 reference shoreline first (so it can guide S1 calibration)
+    s2_ref_gdf, s2_water_poly = generate_validation_shoreline_s2(year, season, aoi_geometry, bridge_mask=river_bridge_mask)
+    
     # 2. Train RF Classifier
     best_params = {'numberOfTrees': 300, 'variablesPerSplit': 3, 'bagFraction': 0.5}
     classifier, _ = train_classifier(training_fc, composite, CLASSIFIER_FEATURES, best_params)
@@ -363,6 +374,9 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
     corridor_geom = centerline_fc.geometry().buffer(2000)
     composite_clipped = composite.clip(corridor_geom)
     classified, _ = classify_image(composite_clipped, classifier, CLASSIFIER_FEATURES)
+    
+    # Calibrate classified image using S2 reference shoreline
+    classified = calibrate_s1_water_mask(classified, composite, s2_ref_gdf)
     
     # 4. Refine classification (Phase 4)
     water_mask_refined, sand_mask_refined, qc_stats = refine_classification(
@@ -378,7 +392,9 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
         centerline_fc=centerline_fc,
         scale=scale,
         year=year,
-        season=season
+        season=season,
+        bridge_mask=river_bridge_mask,
+        s2_water_poly=s2_water_poly
     )
     
     assert not raw_gdf.empty, f"[QC Error] Raw Shoreline is empty for {year} {season}!"
@@ -414,7 +430,6 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
     print(f"[Phase 7] Saved finalized shoreline to: {out_geojson_path}")
     
     # 8. S2 Reference Shoreline & Validation (Phase 8)
-    s2_ref_gdf = generate_validation_shoreline_s2(year, season, aoi_geometry)
     validation_metrics = validate_shoreline(final_gdf, s2_ref_gdf)
     
     # Save validation reference GeoJSON

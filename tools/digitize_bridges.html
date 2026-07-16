@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SongHong Bridge Digitization Tool</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Leaflet Draw CSS & JS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(17, 24, 39, 0.75);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #00f2fe;
+            --accent-glow: rgba(0, 242, 254, 0.4);
+            --text-color: #e2e8f0;
+            --text-muted: #94a3b8;
+            --font-primary: 'Outfit', sans-serif;
+            --font-mono: 'Space Grotesk', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar Container */
+        .sidebar {
+            width: 400px;
+            background-color: #0d1321;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            z-index: 10;
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+        }
+
+        .header {
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Instructions block */
+        .section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-color);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: var(--font-mono);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .instructions-list {
+            list-style-type: none;
+            font-size: 13px;
+            color: #cbd5e1;
+        }
+
+        .instructions-list li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 20px;
+            line-height: 1.4;
+        }
+
+        .instructions-list li::before {
+            content: "✦";
+            position: absolute;
+            left: 0;
+            color: var(--accent-color);
+        }
+
+        /* Control Buttons */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            font-family: var(--font-primary);
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            color: #0b0f19;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 242, 254, 0.6);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-color);
+        }
+
+        /* File Input Styling */
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Statistics Panel */
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .stats-table th, .stats-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stats-table th {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .stats-table td {
+            font-family: var(--font-mono);
+        }
+
+        /* Map Container */
+        #map {
+            flex-grow: 1;
+            height: 100%;
+            background-color: #111;
+        }
+
+        /* Darkening Leaflet controls to match theme */
+        .leaflet-bar a {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        .leaflet-bar a:hover {
+            background-color: #334155 !important;
+            color: var(--accent-color) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="header">
+            <h1>Bridge Digitization</h1>
+            <p>SongHong SAR Monitoring Shoreline Pipeline Refinement Tool</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Instructions</div>
+            <ul class="instructions-list">
+                <li>Load your existing <code>bridges.geojson</code> using the button below.</li>
+                <li>Draw new bridge polygons using the polygon drawing tool on the map toolbar.</li>
+                <li>Edit or delete existing bridge polygons.</li>
+                <li>Export the updated geometries and save the file back as <code>data/bridges.geojson</code> in the project directory.</li>
+            </ul>
+        </div>
+
+        <div class="btn-group">
+            <div class="file-input-wrapper">
+                <button class="btn btn-secondary">📁 Load bridges.geojson</button>
+                <input type="file" id="upload-geojson" accept=".geojson,application/json" />
+            </div>
+            
+            <button class="btn btn-primary" id="export-geojson">💾 Export Updated GeoJSON</button>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Current Geometries</div>
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Bridge Name</th>
+                        <th>Type</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="bridge-list">
+                    <!-- Dynamic Bridge Rows -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        // Initialize Map
+        const map = L.map('map').setView([21.03, 105.85], 11);
+
+        // Define Base Maps
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            attribution: '© Google Maps'
+        });
+
+        // Base maps control
+        const baseMaps = {
+            "OpenStreetMap": osm,
+            "Google Satellite": satellite
+        };
+        L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+        // FeatureGroup to store drawn items
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        // Add Draw Control
+        const drawControl = new L.Control.Draw({
+            edit: {
+                featureGroup: drawnItems
+            },
+            draw: {
+                polygon: {
+                    allowIntersection: false,
+                    showArea: true,
+                    shapeOptions: {
+                        color: '#00f2fe',
+                        fillColor: '#00f2fe',
+                        fillOpacity: 0.3,
+                        weight: 3
+                    }
+                },
+                polyline: false,
+                rectangle: false,
+                circle: false,
+                marker: false,
+                circlemarker: false
+            }
+        });
+        map.addControl(drawControl);
+
+        // Update bridge list sidebar
+        function updateSidebarList() {
+            const listBody = document.getElementById('bridge-list');
+            listBody.innerHTML = '';
+            
+            let count = 1;
+            drawnItems.eachLayer((layer) => {
+                const name = layer.feature && layer.feature.properties && layer.feature.properties.name
+                    ? layer.feature.properties.name
+                    : `Bridge ${count++}`;
+                
+                const tr = document.createElement('tr');
+                
+                const tdName = document.createElement('td');
+                tdName.textContent = name;
+                
+                const tdType = document.createElement('td');
+                tdType.textContent = layer instanceof L.Polygon ? 'Polygon' : 'LineString';
+                
+                const tdActions = document.createElement('td');
+                const btnZoom = document.createElement('button');
+                btnZoom.textContent = '🔍';
+                btnZoom.style.background = 'none';
+                btnZoom.style.border = 'none';
+                btnZoom.style.cursor = 'pointer';
+                btnZoom.onclick = () => {
+                    map.fitBounds(layer.getBounds());
+                };
+                
+                tdActions.appendChild(btnZoom);
+                tr.appendChild(tdName);
+                tr.appendChild(tdType);
+                tr.appendChild(tdActions);
+                
+                listBody.appendChild(tr);
+            });
+        }
+
+        // Map Draw Events
+        map.on(L.Draw.Event.CREATED, function (event) {
+            const layer = event.layer;
+            
+            // Ask for name
+            const name = prompt("Enter the name for this bridge (e.g., Nhat Tan, Thanh Tri):");
+            if (name) {
+                layer.feature = layer.feature || { type: "Feature" };
+                layer.feature.properties = layer.feature.properties || {};
+                layer.feature.properties.name = name;
+                layer.feature.properties.id = name.toLowerCase().replace(/ /g, "_");
+            }
+            
+            drawnItems.addLayer(layer);
+            updateSidebarList();
+        });
+
+        map.on(L.Draw.Event.EDITED, function (event) {
+            updateSidebarList();
+        });
+
+        map.on(L.Draw.Event.DELETED, function (event) {
+            updateSidebarList();
+        });
+
+        // Load Uploaded GeoJSON
+        document.getElementById('upload-geojson').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const geojson = JSON.parse(evt.target.result);
+                    drawnItems.clearLayers();
+                    
+                    L.geoJSON(geojson, {
+                        style: function (feature) {
+                            return {
+                                color: '#00f2fe',
+                                fillColor: '#00f2fe',
+                                fillOpacity: 0.3,
+                                weight: 3
+                            };
+                        },
+                        onEachFeature: function(feature, layer) {
+                            drawnItems.addLayer(layer);
+                        }
+                    });
+                    
+                    updateSidebarList();
+                    
+                    // Fit bounds to features
+                    if (drawnItems.getLayers().length > 0) {
+                        map.fitBounds(drawnItems.getBounds());
+                    }
+                    
+                    alert(`Loaded ${drawnItems.getLayers().length} bridge features successfully.`);
+                } catch(err) {
+                    alert("Error parsing GeoJSON file: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // Export Updated GeoJSON
+        document.getElementById('export-geojson').addEventListener('click', function() {
+            if (drawnItems.getLayers().length === 0) {
+                alert("No features to export!");
+                return;
+            }
+
+            const collection = {
+                type: "FeatureCollection",
+                features: []
+            };
+
+            drawnItems.eachLayer((layer) => {
+                const geo = layer.toGeoJSON();
+                // Ensure correct geometry and properties
+                if (!geo.properties) {
+                    geo.properties = {};
+                }
+                
+                // Copy properties from original feature
+                if (layer.feature && layer.feature.properties) {
+                    Object.assign(geo.properties, layer.feature.properties);
+                }
+                
+                // Fallback for ID and name if not present
+                if (!geo.properties.name) {
+                    geo.properties.name = "Bridge Segment";
+                }
+                if (!geo.properties.id) {
+                    geo.properties.id = geo.properties.name.toLowerCase().replace(/ /g, "_");
+                }
+                
+                collection.features.push(geo);
+            });
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(collection, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "bridges.geojson");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        });
+    </script>
+</body>
+</html>
