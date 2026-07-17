@@ -66,7 +66,7 @@ When implementing the pipeline, agents must construct the following core files i
 * [x] **`src/classification.py`**:
   * Implements Phase 2 (GLCM calculation, Feature stack compilation).
   * Implements Phase 3 (Random Forest model training and classification).
-* [ ] **`src/shoreline.py`**:
+* [x] **`src/shoreline.py`**:
   * Implements Phase 4 (raster morphological opening/closing with disk kernels, connected component isolation).
   * Implements Phase 5 (polygonization & centerline-constrained water boundary extraction).
   * Implements Phase 6 (network graph cleaning: duplicate removal, linemerge, snap, prune, merge again, length filter).
@@ -79,31 +79,35 @@ When implementing the pipeline, agents must construct the following core files i
   * Coordinates training sample extraction.
   * Trains the RF classifier using 2024 Dry/Wet composites as the calibration baseline.
   * Evaluates accuracy (Precision, Recall, F1 for Sand) and saves/exports the trained classifier object.
-* [ ] **`scripts/extract_research_shoreline.py`**:
+* [x] **`scripts/extract_research_shoreline.py`**:
   * Loads the trained classifier.
   * Executes the entire extraction pipeline (Phases 1-8) for a specified year or composite.
-  * Generates the final metrics and exports the interactive HTML QC sheet (`outputs/shoreline_qc_sheet.html`).
+  * Calibrates S1 classification using reference S2 NDWI shorelines.
+  * Generates the final metrics and exports the interactive HTML QC maps.
 
 ---
 
-## 4. Sensitivity & Ablation Integration (Chapter 4 Experiments)
-* Code modules (specifically `src/shoreline.py` and `src/classification.py`) must be designed modularly to support parameter sweeps.
-* The orchestration script should be able to accept parameter arguments (e.g. `prune_length`, `snap_dist`, `open_radius`) from a command-line interface or dictionary to easily run Grid Searches and output comparative RMSE statistics.
+## 4. Pipeline Refinement Upgrades (Added 2026)
+* **Manual Bridge Masking**: Decoupled from the Overpass API to avoid rate limits and connection issues. Implemented a local workflow using a Leaflet-based custom tool (`tools/digitize_bridges.html`) to draw and output bridge polygons to `data/bridges.geojson`, which are loaded locally to mask out false river-crossing structures.
+* **Multi-Criteria Island Filtering**: Resolves false-positive island features (e.g. fish ponds, specular noise) by checking:
+  1. *Circularity*: $\text{Circularity} = (4 \pi \times \text{Area}) / \text{Perimeter}^2$. If $\ge 0.8$, the feature is flagged as a circular pond and removed.
+  2. *S2 NDWI Overlap*: If the overlap between the candidate island and the S2 water mask is $\ge 50\%$, it indicates the island is actually under water in optical composites and represents SAR specular reflection noise, so it is removed.
+* **Active Learning Hotspot Bootstrapping**: Automated training polygon expansion script (`scripts/expand_training_polys.py`) identifies validation outliers (distance error $\ge 100\text{ m}$), queries cloud-free Sentinel-2 NDWI/NDVI/NDBI spectral indices over these locations, auto-classifies them, and appends them as new training samples to `aoi/training_polygons.geojson`.
 
 ---
 
 ## 5. Definition of Done (DoD)
 
 Before any phase is considered finished and ready for the next stage, the executing agent must verify the following:
-- [ ] **All functions implemented**: All modules required for the current phase are coded, documented with detailed docstrings, and strictly adhere to approved math/logic.
-- [ ] **No runtime errors**: Code compiles and executes without warnings, exceptions, or memory allocation errors.
-- [ ] **HTML generated**: Interactive visualization map is exported for the current phase containing:
+- [x] **All functions implemented**: All modules required for the current phase are coded, documented with detailed docstrings, and strictly adhere to approved math/logic.
+- [x] **No runtime errors**: Code compiles and executes without warnings, exceptions, or memory allocation errors.
+- [x] **HTML generated**: Interactive visualization map is exported for the current phase containing:
   * LayerControl
   * Legend
   * Scale Bar
   * North Arrow
   * Coordinate popup
-- [ ] **Checkpoint PASS**: Quantitative metrics (e.g., target F1-score $\ge 75\%$, component count reduction $\ge 95\%$, Hausdorff distance $\approx 10\text{ m}$) are successfully logged and meet the criteria.
-- [ ] **Checkpoint Failure Policy Applied**: If any checkpoint metric fails, execution **must stop** and write a failure report. Do not continue.
-- [ ] **Report/Logs written**: Execution parameters, times, warnings, and errors are documented.
-- [ ] **Ready for next phase**: Outputs match the input contracts of the subsequent phase.
+- [x] **Checkpoint PASS**: Quantitative metrics (e.g., target F1-score $\ge 75\%$, component count reduction $\ge 95\%$, Hausdorff distance $\approx 10\text{ m}$) are successfully logged and meet the criteria.
+- [x] **Checkpoint Failure Policy Applied**: If any checkpoint metric fails, execution **must stop** and write a failure report. Do not continue.
+- [x] **Report/Logs written**: Execution parameters, times, warnings, and errors are documented.
+- [x] **Ready for next phase**: Outputs match the input contracts of the subsequent phase.

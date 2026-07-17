@@ -36,13 +36,13 @@ Load the outlier GeoJSON files into a GIS software (e.g., QGIS) or check the hig
 ## 3. Verify Output Deliverables
 
 Verify that the following files exist in the `outputs/` directory and have correct content:
-- [ ] **CSV Statistics**:
+- [x] **CSV Statistics** (Verified programmatically: exists and contains all required metrics):
     - `outputs/validation_statistics_2024_dry.csv`
     - `outputs/validation_statistics_2024_wet.csv`
-- [ ] **CSV Buffer Accuracies**:
+- [x] **CSV Buffer Accuracies** (Verified programmatically: calculated for 10m to 150m buffer increments):
     - `outputs/buffer_accuracy_2024_dry.csv`
     - `outputs/buffer_accuracy_2024_wet.csv`
-- [ ] **Validation Report**:
+- [x] **Validation Report** (Verified programmatically: detailed scientific report generated):
     - Open `outputs/validation_report.md` and read the scientific interpretation section.
 
 ---
@@ -53,8 +53,8 @@ Verify that the following files exist in the `outputs/` directory and have corre
 ---
 
 ## 5. Update Project Documentation
-*   [ ] **Document Refinement Upgrades**:
-    *   Document the **manual bridge masking** workflow (decoupling from Overpass API, editing with `tools/digitize_bridges.html`).
-    *   Document the **multi-criteria island filtering** (circularity threshold $\ge 0.8$, Sentinel-2 overlap threshold $\ge 0.5$).
-    *   Document the **active learning hotspot bootstrapping** workflow (`scripts/expand_training_polys.py` querying S2 NDWI/NDVI/NDBI metrics to auto-expand training polygons).
-    *   Update relevant phase-specific markdown files (e.g. `shoreline_extraction/MASTER_AGENT.md` or `shoreline_extraction/shoreline_extraction_plan.md`) with the final pipeline architecture.
+*   [x] **Document Refinement Upgrades**:
+    *   [x] Document the **manual bridge masking** workflow (decoupling from Overpass API, editing with `tools/digitize_bridges.html`).
+    *   [x] Document the **multi-criteria island filtering** (circularity threshold $\ge 0.8$, Sentinel-2 overlap threshold $\ge 0.5$).
+    *   [x] Document the **active learning hotspot bootstrapping** workflow (`scripts/expand_training_polys.py` querying S2 NDWI/NDVI/NDBI metrics to auto-expand training polygons).
+    *   [x] Update relevant phase-specific markdown files (e.g. `shoreline_extraction/MASTER_AGENT.md` or `shoreline_extraction/shoreline_extraction_plan.md`) with the final pipeline architecture.
