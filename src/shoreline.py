@@ -9,6 +9,7 @@ import json
 import time
 import ee
 import geopandas as gpd
+import numpy as np
 from shapely.validation import make_valid
 from shapely.geometry import shape, LineString, MultiLineString, GeometryCollection, Polygon
 from src.config import (
@@ -302,6 +303,8 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
             })
             print(f"[Phase 5] Downloading refined water mask from GEE (attempt {attempt+1}/5)...")
             r = requests.get(url, timeout=300)
+            if r.status_code != 200:
+                print(f"[Error] GEE response text: {r.text}")
             r.raise_for_status()
             break
         except Exception as e:
