@@ -10,6 +10,8 @@ import folium
 from folium.plugins import MousePosition
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
+from shapely.ops import substring
+from shapely.validation import make_valid
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -352,28 +354,46 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
     print(f" END-TO-END SHORELINE PIPELINE: {year} {season.upper()}...")
     print(f"=============================================================")
     
+    # Define simplified features stack for Reaches 2 & 3 (no DEM/Slope, simplified GLCM)
+    GLOBAL_FEATURES = [
+        'VV', 'VH', 'VV_ratio', 'VV_sum', 'VV_mean',
+        'VV_contrast', 'VV_variance'
+    ]
+    
+    # Delineate Reach 2 & 3 corridor for clipping
+    cl_linestring = get_continuous_centerline()
+    cl_gdf = gpd.GeoDataFrame(geometry=[cl_linestring], crs="EPSG:4326").to_crs("EPSG:32648")
+    centerline_geom_utm = cl_gdf.geometry.iloc[0]
+    total_len = centerline_geom_utm.length
+    reach2_3_line_utm = substring(centerline_geom_utm, total_len / 3.0, total_len)
+    
+    aoi_geojson = load_local_aoi()
+    aoi_gdf = gpd.GeoDataFrame.from_features(aoi_geojson['features'], crs="EPSG:4326")
+    aoi_utm = aoi_gdf.to_crs("EPSG:32648").geometry.union_all()
+    reach2_3_corridor_utm = reach2_3_line_utm.buffer(2000).intersection(aoi_utm)
+    
     # 1. Create seasonal composite
     composite = create_seasonal_composite(year, season, aoi_geometry)
     
     # 1b. Load manual bridges and build bridge mask inside River Corridor
     bridges_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'bridges.geojson')
     bridges_gdf = load_manual_bridges(bridges_path)
-    cl_linestring = get_continuous_centerline()
-    cl_gdf = gpd.GeoDataFrame(geometry=[cl_linestring], crs="EPSG:4326").to_crs("EPSG:32648")
     corridor_poly = cl_gdf.geometry.buffer(2000).unary_union
     river_bridge_mask = bridges_gdf.geometry.buffer(0).unary_union.intersection(corridor_poly)
     
     # 1c. Generate Sentinel-2 reference shoreline first (so it can guide S1 calibration)
     s2_ref_gdf, s2_water_poly = generate_validation_shoreline_s2(year, season, aoi_geometry, bridge_mask=river_bridge_mask)
-    
+    if not s2_ref_gdf.empty:
+        s2_ref_gdf = s2_ref_gdf[s2_ref_gdf.geometry.intersects(reach2_3_corridor_utm)]
+        
     # 2. Train RF Classifier
     best_params = {'numberOfTrees': 300, 'variablesPerSplit': 3, 'bagFraction': 0.5}
-    classifier, _ = train_classifier(training_fc, composite, CLASSIFIER_FEATURES, best_params)
+    classifier, _ = train_classifier(training_fc, composite, GLOBAL_FEATURES, best_params)
     
     # 3. Classify composite
     corridor_geom = centerline_fc.geometry().buffer(2000)
     composite_clipped = composite.clip(corridor_geom)
-    classified, _ = classify_image(composite_clipped, classifier, CLASSIFIER_FEATURES)
+    classified, _ = classify_image(composite_clipped, classifier, GLOBAL_FEATURES)
     
     # Calibrate classified image using S2 reference shoreline
     classified = calibrate_s1_water_mask(classified, composite, s2_ref_gdf)
@@ -397,6 +417,9 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
         s2_water_poly=s2_water_poly
     )
     
+    if not raw_gdf.empty:
+        raw_gdf = raw_gdf[raw_gdf.geometry.intersects(reach2_3_corridor_utm)]
+        
     assert not raw_gdf.empty, f"[QC Error] Raw Shoreline is empty for {year} {season}!"
     assert raw_gdf.geometry.is_valid.all(), f"[QC Error] Invalid geometries in raw shoreline!"
     
@@ -670,15 +693,33 @@ def main():
         ee.Initialize(project=GEE_PROJECT)
     print(f"[GEE] Initialized successfully with project: {GEE_PROJECT}")
     
-    aoi_geometry = get_aoi_geometry()
+    # Load centerline and construct Reach 2 & 3 geometry (lower 2/3 of centerline)
+    cl_linestring = get_continuous_centerline()
+    cl_gdf = gpd.GeoDataFrame(geometry=[cl_linestring], crs="EPSG:4326").to_crs("EPSG:32648")
+    centerline_geom_utm = cl_gdf.geometry.iloc[0]
+    total_len = centerline_geom_utm.length
+    
+    reach2_3_line_utm = substring(centerline_geom_utm, total_len / 3.0, total_len)
+    
+    aoi_gdf = gpd.read_file("aoi/song_hong_aoi.geojson")
+    aoi_utm = aoi_gdf.to_crs("EPSG:32648").geometry.union_all()
+    
+    reach2_3_corridor_utm = reach2_3_line_utm.buffer(2000).intersection(aoi_utm)
+    reach2_3_corridor_wgs84 = gpd.GeoDataFrame(geometry=[reach2_3_corridor_utm], crs="EPSG:32648").to_crs("EPSG:4326").geometry.iloc[0]
+    
+    reach2_3_geojson = json.loads(gpd.GeoSeries([reach2_3_corridor_wgs84]).to_json())
+    reach2_3_ee_geom = ee.Geometry(reach2_3_geojson['features'][0]['geometry'])
+    
     centerline_fc = load_centerline()
-    training_fc = load_training_polygons()
+    training_fc = load_training_polygons().filterBounds(reach2_3_ee_geom)
+    
+    print("[Global Pipeline] Running specifically for Reach 2 & Reach 3...")
     
     # Run 2024 Dry
-    dry_metrics, dry_buffer, dry_outliers_count = process_season(2024, 'dry', aoi_geometry, centerline_fc, training_fc)
+    dry_metrics, dry_buffer, dry_outliers_count = process_season(2024, 'dry', reach2_3_ee_geom, centerline_fc, training_fc)
     
     # Run 2024 Wet
-    wet_metrics, wet_buffer, wet_outliers_count = process_season(2024, 'wet', aoi_geometry, centerline_fc, training_fc)
+    wet_metrics, wet_buffer, wet_outliers_count = process_season(2024, 'wet', reach2_3_ee_geom, centerline_fc, training_fc)
     
     # Generate publication-grade Markdown validation report
     generate_validation_report(
