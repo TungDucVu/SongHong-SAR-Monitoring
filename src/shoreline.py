@@ -320,6 +320,17 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
         raster_data = src.read(1)
         transform = src.transform
         
+    # Morphological cleaning using scikit-image
+    try:
+        import skimage.morphology
+        bool_mask = raster_data > 0
+        bool_mask = skimage.morphology.remove_small_objects(bool_mask, min_size=20)
+        bool_mask = skimage.morphology.remove_small_holes(bool_mask, area_threshold=100)
+        raster_data = bool_mask.astype(np.uint8)
+        print("[Phase 5] Local morphological cleaning applied (remove_small_objects < 20px, remove_small_holes < 100px).")
+    except Exception as e:
+        print(f"[Warning] Local morphological cleaning failed: {e}")
+        
     water_geoms = []
     for geom, val in shapes(raster_data, transform=transform):
         if val == 1:
@@ -386,6 +397,18 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
     if not water_dissolved.is_valid:
         water_dissolved = make_valid(water_dissolved)
         invalid_fixed += 1
+        
+    # Apply Active Channel Constraints (River Buffer Constraints)
+    if s2_water_poly is not None and not s2_water_poly.is_empty:
+        try:
+            print("[Phase 5] Applying active channel constraints (S2 reference buffer 150m)...")
+            active_channel_buffer = s2_water_poly.buffer(150.0)
+            water_dissolved = water_dissolved.intersection(active_channel_buffer)
+            if not water_dissolved.is_valid:
+                water_dissolved = make_valid(water_dissolved)
+            print("[Phase 5] Active channel constraints applied successfully.")
+        except Exception as e:
+            print(f"[Warning] Failed to apply active channel constraints: {e}")
         
     # 3. Boundary Extraction (Exterior and Island rings)
     raw_lines = []
