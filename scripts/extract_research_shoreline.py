@@ -626,7 +626,7 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
                 z-index:9999; font-size:12px; background-color:rgba(255, 255, 255, 0.95);
                 border: 2px solid grey; border-radius: 6px; padding: 10px;
                 box-shadow: 2px 2px 5px rgba(0,0,0,0.2); font-family: sans-serif;">
-        <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; text-align: center;">Shoreline QC Dashboard - {season.upper()} 2024</h4>
+        <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; text-align: center;">Shoreline QC Dashboard - {season.upper()} {year}</h4>
         <div style="display: flex; align-items: center; margin-bottom: 5px;">
             <div style="width: 16px; height: 16px; background-color: #2980b9; opacity: 0.3; margin-right: 8px;"></div>
             <span>Refined GEE Water Mask (Blue)</span>
