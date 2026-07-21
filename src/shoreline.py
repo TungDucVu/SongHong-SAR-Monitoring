@@ -937,7 +937,7 @@ def smooth_and_simplify_shoreline(cleaned_gdf, config_dict=None):
     
     return smoothed_gdf, metrics
 
-def generate_validation_shoreline_s2(year, season, aoi_geometry, bridge_mask=None, config_dict=None):
+def generate_validation_shoreline_s2(year, season, aoi_geometry, bridge_mask=None, config_dict=None, bypass_cache=False):
     """
     Implements Phase 8: Sentinel-2 NDWI reference shoreline extraction.
     
@@ -952,11 +952,31 @@ def generate_validation_shoreline_s2(year, season, aoi_geometry, bridge_mask=Non
     Returns:
       reference_gdf (gpd.GeoDataFrame): Sentinel-2 reference shoreline in EPSG:32648.
     """
+    import os
     import requests
     import io
     import rasterio
     from rasterio.features import shapes
     import time
+    
+    ref_path = os.path.join("data", f"s2_ref_shoreline_{year}_{season}.geojson")
+    poly_path = os.path.join("data", f"s2_water_poly_{year}_{season}.geojson")
+    
+    if not bypass_cache and os.path.exists(ref_path) and os.path.exists(poly_path):
+        try:
+            print(f"[Phase 8] Loading cached S2 reference data from local GeoJSONs: {ref_path}")
+            ref_gdf = gpd.read_file(ref_path)
+            poly_gdf = gpd.read_file(poly_path)
+            if hasattr(poly_gdf.geometry, 'union_all'):
+                s2_water_poly = poly_gdf.geometry.union_all()
+            else:
+                s2_water_poly = poly_gdf.geometry.unary_union
+            if not s2_water_poly.is_valid:
+                s2_water_poly = make_valid(s2_water_poly)
+            print(f"[Phase 8] Loaded local cache: {len(ref_gdf)} shoreline segments.")
+            return ref_gdf, s2_water_poly
+        except Exception as e:
+            print(f"[Warning] Failed to load local S2 cache: {e}. Falling back to GEE download...")
     
     start_time = time.time()
     
@@ -980,6 +1000,25 @@ def generate_validation_shoreline_s2(year, season, aoi_geometry, bridge_mask=Non
         ))
     elif season == 'wet':
         s2_col = s2_col.filter(ee.Filter.calendarRange(5, 10, 'month'))
+        
+    try:
+        s2_size = s2_col.size().getInfo()
+    except Exception:
+        s2_size = 0
+        
+    if s2_size == 0:
+        print(f"[Phase 8] No Level-2A images found for {year} {season}. Falling back to Level-1C (COPERNICUS/S2_HARMONIZED)...")
+        s2_col = (ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
+                  .filterBounds(aoi_geometry)
+                  .filterDate(f'{year}-01-01', f'{year}-12-31')
+                  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 25)))
+        if season == 'dry':
+            s2_col = s2_col.filter(ee.Filter.Or(
+                ee.Filter.calendarRange(1, 4, 'month'),
+                ee.Filter.calendarRange(11, 12, 'month')
+            ))
+        elif season == 'wet':
+            s2_col = s2_col.filter(ee.Filter.calendarRange(5, 10, 'month'))
         
     def mask_s2_clouds(img):
         qa = img.select('QA60')
@@ -1037,7 +1076,7 @@ def generate_validation_shoreline_s2(year, season, aoi_geometry, bridge_mask=Non
     
     if not water_geoms:
         print("[Warning] No S2 water polygons found.")
-        return gpd.GeoDataFrame(geometry=[], crs="EPSG:32648")
+        return gpd.GeoDataFrame(geometry=[], crs="EPSG:32648"), None
         
     # Get continuous centerline locally for intersection selection
     cl_linestring = get_continuous_centerline()
@@ -1054,7 +1093,7 @@ def generate_validation_shoreline_s2(year, season, aoi_geometry, bridge_mask=Non
             
     if not selected_polys:
         print("[Warning] No main S2 water corridor polygons found.")
-        return gpd.GeoDataFrame(geometry=[], crs="EPSG:32648")
+        return gpd.GeoDataFrame(geometry=[], crs="EPSG:32648"), None
         
     # Dissolve water polygons
     from shapely.ops import unary_union as shapely_unary_union
@@ -1109,6 +1148,17 @@ def generate_validation_shoreline_s2(year, season, aoi_geometry, bridge_mask=Non
         
     ref_gdf = gpd.GeoDataFrame(features, crs="EPSG:32648")
     print(f"[Phase 8] Extracted S2 NDWI reference shoreline. {len(ref_gdf)} segments, total length: {ref_gdf.geometry.length.sum()/1000:.2f} km")
+    
+    # Save/cache locally
+    try:
+        os.makedirs("data", exist_ok=True)
+        ref_gdf.to_file(ref_path, driver="GeoJSON")
+        poly_gdf = gpd.GeoDataFrame(geometry=[water_dissolved], crs="EPSG:32648")
+        poly_gdf.to_file(poly_path, driver="GeoJSON")
+        print(f"[Phase 8] Cached S2 reference data locally to {ref_path}")
+    except Exception as e:
+        print(f"[Warning] Failed to cache S2 reference data locally: {e}")
+        
     return ref_gdf, water_dissolved
 
 def validate_shoreline(extracted_gdf, reference_gdf):

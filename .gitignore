@@ -30,3 +30,7 @@ Thumbs.db
 # Temporary scratch files and scripts
 scratch/
 *_backup.geojson
+
+# S2 local water mask cache
+data/s2_ref_shoreline_*.geojson
+data/s2_water_poly_*.geojson
