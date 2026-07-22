@@ -88,18 +88,76 @@ Once the classification water probability map is generated, it undergoes local g
 
 ---
 
-## 4. Execution Guidelines
+## 4. Execution Guidelines & Workflow Scripts
 
-### Step 1: Pre-download Sentinel-2 Water Masks (Offline Caching)
-To bypass GEE compute quota limitations and ensure offline resilience, pre-generate the water mask local cache:
-```bash
-python scripts/download_s2_water_masks.py
-```
-This downloads the 20 historical reference files (2017–2026) for both seasons and saves them as GeoJSONs under `data/`.
+The pipeline requires running the following scripts in order to cache reference data, train classifiers, and execute the final hybrid shoreline extraction:
 
-### Step 2: Run Reach 2 & 3 Shoreline Extraction
-To execute classification, threshold calibration, morphological refinement, and accuracy reporting for Reach 2 & 3:
+### 4.1 Python Scripts Overview
+
+1. **Reference Data (Pre-computed)**:
+   * **Purpose**: All Sentinel-2 reference shorelines (`s2_ref_shoreline`) and water polygons (`water_poly`) have already been downloaded and cached locally.
+   * **Location**: These files are located in the `data/` directory. This setup skips redundant downloads, speeds up validation phases, and prevents GEE timeouts.
+   
+2. **`scripts/train_classifier.py`**:
+   * **Purpose**: Tunes, trains, and evaluates the global 4-class Random Forest model (Water, Sand, Built-up, Vegetation) over the AOI.
+   * **Outputs**: Generates accuracy metrics reports (`outputs/rf_metrics_{year}_{season}.txt`) and interactive HTML maps.
+
+3. **`scripts/extract_research_shoreline.py`**:
+   * **Purpose**: Dedicated pipeline script for **Reach 2 & 3** using a single standard Global Random Forest model without custom bridge polygon interventions.
+   * **Workflow**: Processes Reach 2 & 3 as a single continuous corridor using native 20m scale and exports final GeoJSONs and reports.
+
+4. **`scratch/run_reach1_final_execution.py`**:
+   * **Purpose**: Dedicated advanced execution and validation script specifically tailored for **Reach 1 (Upper Reach)**. Includes Otsu 4-class segmentation, Hard-Negative Boundary Mining, Topographic Integration (HAND/Slope), and customized spatial post-processing.
+   * **Note**: In future runs, **`scratch/run_reach1_final_execution.py`** should be used exclusively when performing Reach 1 Local RF classification and validation.
+
+---
+
+### 4.2 Execution Steps (10-Year Composite Loop)
+
+To run the full pipeline for all composites across a 10-year period (e.g., 2015-2024), you must run both Reach 1 and Reach 2&3 scripts separately for each year.
+
+#### Step 1: Execute Reach 1 (Upper Reach)
+Reach 1 uses a highly optimized local Random Forest model featuring Otsu 4-class segmentation, Hard-Negative Boundary Mining, Topographic Integration (HAND & Slope), and strict active channel buffering.
+
 ```bash
-python scripts/extract_research_shoreline.py
+# Run the advanced pipeline for Reach 1
+python scratch/run_reach1_final_execution.py
 ```
-Outputs (Finalized shoreline GeoJSONs, interactive Folium QC dashboards, error CDF plots, and Markdown reports) are saved in the `outputs/` folder.
+> [!NOTE]
+> `run_reach1_final_execution.py` currently hardcodes the evaluation year inside the script. You will need to parameterize the `year` argument inside its `main()` function to support looping.
+
+#### Step 2: Execute Reach 2 & 3 (Middle/Lower Reaches)
+Reach 2 & 3 uses the finetuned global Random Forest model.
+
+```bash
+# Run the global pipeline for Reach 2 & 3 for a specific year
+python scripts/extract_research_shoreline.py --year 2024
+```
+
+#### Step 3: Loop for 10-Year Monitoring
+Once both scripts are parameterized, you can process the entire 10-year monitoring period using a simple loop:
+
+```powershell
+# PowerShell example for processing 2015-2024
+for ($year=2015; $year -le 2024; $year++) {
+    Write-Host "Processing Year: $year"
+    
+    # 1. Process Reach 2 & 3
+    python scripts/extract_research_shoreline.py --year $year
+    
+    # 2. Process Reach 1
+    python scratch/run_reach1_final_execution.py --year $year
+}
+```
+
+---
+
+### 4.3 Output Statistics Instructions
+
+During execution, `scripts/extract_research_shoreline.py` and `scratch/run_reach1_final_execution.py` automatically generate validation statistics and markdown files:
+* **Output Path**: `config/{year}_dry_stats.md` and `config/{year}_wet_stats.md` (and dedicated reports in `outputs/` or `docs/`)
+* **Contents Logged**:
+  * **Runtime Information**: Execution date, start/end time, and total runtime duration.
+  * **Model Details**: Model parameters (trees, variables per split) and feature sets.
+  * **Accuracy Parameters**: Overall RMSE, Mean/Median errors, Hausdorff distance, P95 metrics, and reach-wise breakdowns.
+

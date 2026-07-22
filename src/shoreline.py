@@ -388,21 +388,19 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
     from shapely.ops import unary_union as shapely_unary_union
     water_dissolved = make_valid(shapely_unary_union(selected_polys))
     
-    # Connect water across manual bridge geometries if mask is provided
-    if bridge_mask is not None:
-        water_dissolved = connect_water_across_bridges(water_dissolved, bridge_mask, centerline_geom=centerline_union)
-        
     # Ensure geometry validity
     invalid_fixed = 0
     if not water_dissolved.is_valid:
         water_dissolved = make_valid(water_dissolved)
         invalid_fixed += 1
         
+    # Active Channel Buffer (150m around S2 reference shoreline)
+    active_channel_buffer = s2_water_poly.buffer(150.0) if s2_water_poly is not None and not s2_water_poly.is_empty else None
+
     # Apply Active Channel Constraints (River Buffer Constraints)
-    if s2_water_poly is not None and not s2_water_poly.is_empty:
+    if active_channel_buffer is not None:
         try:
             print("[Phase 5] Applying active channel constraints (S2 reference buffer 150m)...")
-            active_channel_buffer = s2_water_poly.buffer(150.0)
             water_dissolved = water_dissolved.intersection(active_channel_buffer)
             if not water_dissolved.is_valid:
                 water_dissolved = make_valid(water_dissolved)
@@ -1099,10 +1097,6 @@ def generate_validation_shoreline_s2(year, season, aoi_geometry, bridge_mask=Non
     from shapely.ops import unary_union as shapely_unary_union
     water_dissolved = make_valid(shapely_unary_union(selected_polys))
     
-    # Connect water across manual bridge geometries if mask is provided
-    if bridge_mask is not None:
-        water_dissolved = connect_water_across_bridges(water_dissolved, bridge_mask, centerline_geom=centerline_union)
-        
     if not water_dissolved.is_valid:
         water_dissolved = make_valid(water_dissolved)
         
@@ -1429,54 +1423,3 @@ def calibrate_s1_water_mask(classified, composite, s2_ref_gdf):
     calibrated_classified = classified.where(s2_guided_water, 1)
     
     return calibrated_classified
-
-
-def connect_water_across_bridges(water_geom, bridge_mask, centerline_geom=None):
-    """
-    Connects water polygons across bridges to prevent the shoreline from following
-    bridge structures (Task 9).
-    Formula: W' = W cup (close(W, R) cap B)
-    If centerline_geom is provided, it uses the centerline-connector method to 
-    robustly connect water bodies under the bridges, and then applies morphological 
-    closing to smooth the banks, avoiding any landward spillage.
-    """
-    if bridge_mask is None or bridge_mask.is_empty or water_geom.is_empty:
-        return water_geom
-        
-    from shapely.validation import make_valid
-    from shapely.ops import unary_union as shapely_unary_union
-    
-    updated_water = water_geom
-    
-    if centerline_geom is not None and not centerline_geom.is_empty:
-        from shapely.geometry import Polygon, MultiPolygon
-        bridge_polys = []
-        if bridge_mask.geom_type == 'Polygon':
-            bridge_polys.append(bridge_mask)
-        elif bridge_mask.geom_type in ('MultiPolygon', 'GeometryCollection'):
-            for g in bridge_mask.geoms:
-                if g.geom_type == 'Polygon':
-                    bridge_polys.append(g)
-                    
-        connectors = []
-        for b_poly in bridge_polys:
-            inter = centerline_geom.intersection(b_poly)
-            if not inter.is_empty:
-                # Buffer the centerline segment under the bridge to bridge the gap
-                conn = inter.buffer(50.0)
-                connectors.append(conn)
-                
-        if connectors:
-            all_connectors = shapely_unary_union(connectors)
-            updated_water = make_valid(updated_water.union(all_connectors))
-            
-        # Smooth out bank indentations at the bridge
-        updated_water = updated_water.buffer(35.0).buffer(-35.0)
-    else:
-        # Fallback to morphological closing cap B
-        closed_water = water_geom.buffer(35.0).buffer(-35.0)
-        bridge_connections = closed_water.intersection(bridge_mask)
-        updated_water = make_valid(water_geom.union(bridge_connections))
-        
-    return make_valid(updated_water)
-
