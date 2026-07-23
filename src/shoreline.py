@@ -1483,18 +1483,18 @@ def generate_reach_interactive_map(extracted_gdf, s2_ref_gdf, val_stats, reach_t
             dist = row['distance']
             pt = row.geometry
             
-            if dist < 10.0:
-                color = '#00ff00'
-                radius = 3
-            elif dist < 30.0:
-                color = '#ffff00'
-                radius = 4
-            elif dist < 50.0:
-                color = '#ff8c00'
-                radius = 5
+            if dist <= 30.0:
+                color = '#2ecc71'  # Green (Tốt - Good)
+                radius = 3.5
+                rating_str = 'Tốt (Good)'
+            elif dist <= 70.0:
+                color = '#ffb300'  # Orange/Yellow (Trung bình - Moderate)
+                radius = 5.0
+                rating_str = 'Trung bình (Moderate)'
             else:
-                color = '#ff0000'
-                radius = 6
+                color = '#e74c3c'  # Red (Kém - Poor)
+                radius = 6.5
+                rating_str = 'Kém (Poor)'
 
             folium.CircleMarker(
                 location=[pt.y, pt.x],
@@ -1502,8 +1502,8 @@ def generate_reach_interactive_map(extracted_gdf, s2_ref_gdf, val_stats, reach_t
                 color=color,
                 fill=True,
                 fill_color=color,
-                fill_opacity=0.8,
-                popup=f"<b>Reach:</b> {reach_title}<br><b>Error Distance:</b> {dist:.1f} m"
+                fill_opacity=0.85,
+                popup=f"<b>Reach:</b> {reach_title}<br><b>Error Distance:</b> {dist:.1f} m<br><b>Mức độ:</b> {rating_str}"
             ).add_to(error_group)
 
         error_group.add_to(m)
@@ -1512,19 +1512,57 @@ def generate_reach_interactive_map(extracted_gdf, s2_ref_gdf, val_stats, reach_t
     rmse_e = val_stats.get('rmse_dist_m', 0.0)
     p95_e = val_stats.get('p95_dist_m', 0.0)
 
+    if rmse_e <= 30.0:
+        overall_rating_html = '<span style="color: #2ecc71; font-weight: bold;">TỐT (GOOD - RMSE &lt; 30m)</span>'
+    elif rmse_e <= 70.0:
+        overall_rating_html = '<span style="color: #ffb300; font-weight: bold;">TRUNG BÌNH (MODERATE - 30-70m)</span>'
+    else:
+        overall_rating_html = '<span style="color: #e74c3c; font-weight: bold;">KÉM (POOR - RMSE &gt; 70m)</span>'
+
     legend_html = f'''
-    <div style="position: fixed; bottom: 30px; left: 30px; width: 280px; z-index:9999; background-color: rgba(20,20,20,0.85);
-                color: white; border: 2px solid #555; border-radius: 8px; padding: 12px; font-size: 13px; font-family: sans-serif;">
-        <h4 style="margin: 0 0 8px 0; color: #00ffff;">{reach_title} ({year} {season.upper()})</h4>
-        <div><b>Mean Error:</b> {mean_e:.2f} m</div>
-        <div><b>RMSE Error:</b> {rmse_e:.2f} m</div>
-        <div><b>P95 Error:</b> {p95_e:.2f} m</div>
-        <hr style="border-color: #444; margin: 8px 0;">
-        <div style="font-weight: bold; margin-bottom: 4px;">Validation Error Mask:</div>
-        <div><span style="color:#00ff00;">●</span> &lt; 10m (Cao)</div>
-        <div><span style="color:#ffff00;">●</span> 10m - 30m (Tốt)</div>
-        <div><span style="color:#ff8c00;">●</span> 30m - 50m (Chấp nhận)</div>
-        <div><span style="color:#ff0000;">●</span> &gt; 50m (Lỗi lớn)</div>
+    <div style="position: fixed; bottom: 25px; left: 25px; width: 440px; z-index:9999; 
+                background-color: rgba(18, 22, 28, 0.92); color: #ecf0f1; border: 2px solid #34495e; 
+                border-radius: 10px; padding: 12px; font-size: 12px; font-family: 'Segoe UI', Arial, sans-serif;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+        <h4 style="margin: 0 0 8px 0; color: #00ffff; font-size: 14px; border-bottom: 1px solid #34495e; padding-bottom: 5px;">
+            📌 {reach_title} ({year} {season.upper()})
+        </h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; background: rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 6px;">
+            <div><b>Mean Error:</b> <span style="color:#00ffff;">{mean_e:.2f} m</span></div>
+            <div><b>RMSE Error:</b> <span style="color:#00ffff;">{rmse_e:.2f} m</span></div>
+            <div><b>P95 Error:</b> <span style="color:#00ffff;">{p95_e:.2f} m</span></div>
+            <div><b>Đánh giá tổng thể:</b> {overall_rating_html}</div>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; margin-top: 4px;">
+            <thead>
+                <tr style="background-color: #2c3e50; color: #00ffff; border-bottom: 1px solid #455a64;">
+                    <th style="padding: 4px;">Mức độ (Rating)</th>
+                    <th style="padding: 4px;">Khoảng cách (m)</th>
+                    <th style="padding: 4px;">Quy đổi Pixel (10m)</th>
+                    <th style="padding: 4px;">Ý nghĩa thực tiễn &amp; Học thuật</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid #37474f;">
+                    <td style="padding: 4px; color: #2ecc71; font-weight: bold;">● Tốt (Good)</td>
+                    <td style="padding: 4px;">&lt; 20m - 30m</td>
+                    <td style="padding: 4px;">&lt; 2 - 3 px</td>
+                    <td style="padding: 4px;">Đạt chuẩn công bố khoa học (High Precision). Bắt chính xác sự thay đổi bãi bồi/đường bờ.</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #37474f;">
+                    <td style="padding: 4px; color: #ffb300; font-weight: bold;">● Trung bình (Moderate)</td>
+                    <td style="padding: 4px;">30m - 70m</td>
+                    <td style="padding: 4px;">3 - 7 px</td>
+                    <td style="padding: 4px;">Đạt chuẩn giám sát quy mô vùng (Regional Scale). Nhận diện tốt xu hướng biến động diện rộng.</td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px; color: #e74c3c; font-weight: bold;">● Kém (Poor)</td>
+                    <td style="padding: 4px;">&gt; 70m - 100m+</td>
+                    <td style="padding: 4px;">&gt; 7 - 10+ px</td>
+                    <td style="padding: 4px;">Chưa đạt yêu cầu (High Error). Sai số do nhiễu speckle, phù sa đục hoặc công trình.</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
     '''
     m.get_root().html.add_child(folium.Element(legend_html))
