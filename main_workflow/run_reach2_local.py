@@ -73,20 +73,29 @@ def run_pipeline_for_reach2(year=2024, season='dry'):
     classified_r2, _ = classify_image(composite_r2.clip(reach2_ee_geom), r2_classifier, GLOBAL_FEATURES)
     reach2_water = classified_r2.eq(1)
     
-    # Load manual bridge polygons, buffer by 100m to cover full bridge decks (Thang Long, Chuong Duong, etc.), and override bridge areas to water
+    # Load manual bridge polygons, buffer by 50m along river flow, and strictly constrain to river channel (s2_water_poly) so land banks are NOT affected
     bridges_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'bridges.geojson')
     bridge_mask_img = None
     if os.path.exists(bridges_path):
         bridges_gdf = gpd.read_file(bridges_path)
         if bridges_gdf.crs is None:
             bridges_gdf.set_crs("EPSG:4326", inplace=True)
-        # Buffer bridges by 100m in UTM EPSG:32648
-        bridges_buf_gdf = bridges_gdf.to_crs("EPSG:32648").buffer(100).to_crs("EPSG:4326")
-        bridges_json = json.loads(bridges_buf_gdf.to_json())
+        bridges_utm = bridges_gdf.to_crs("EPSG:32648")
+        bridges_buf_utm = bridges_utm.buffer(50)
+        
+        # Constrain strictly inside river water channel bounds (s2_water_poly + 20m buffer)
+        if s2_water_poly is not None and not s2_water_poly.is_empty:
+            water_channel_limit = s2_water_poly.buffer(20)
+            bridges_constrained_utm = bridges_buf_utm.intersection(water_channel_limit)
+        else:
+            bridges_constrained_utm = bridges_buf_utm
+            
+        bridges_constrained_wgs = gpd.GeoDataFrame(geometry=bridges_constrained_utm, crs="EPSG:32648").to_crs("EPSG:4326")
+        bridges_json = json.loads(bridges_constrained_wgs.to_json())
         bridges_fc = ee.FeatureCollection(bridges_json)
         bridge_mask_img = ee.Image(0).paint(bridges_fc, 1)
         reach2_water = reach2_water.where(bridge_mask_img.eq(1), 1)
-        print("[Bridge Piercing] Applied 100m buffered bridge water override for Thang Long & Chuong Duong bridges.")
+        print("[Bridge Piercing] Applied river-channel constrained bridge water override (Land banks preserved).")
     
     calibrated_water = calibrate_s1_water_mask(reach2_water.rename('classification'), composite_r2, s2_ref_gdf)
     if bridge_mask_img is not None:
