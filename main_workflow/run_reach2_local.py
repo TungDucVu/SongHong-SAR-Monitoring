@@ -73,21 +73,31 @@ def run_pipeline_for_reach2(year=2024, season='dry'):
     classified_r2, _ = classify_image(composite_r2.clip(reach2_ee_geom), r2_classifier, GLOBAL_FEATURES)
     reach2_water = classified_r2.eq(1)
     
-    # Load manual bridge polygons and override bridge areas to water (piercing through bridges)
+    # Load manual bridge polygons, buffer by 100m to cover full bridge decks (Thang Long, Chuong Duong, etc.), and override bridge areas to water
     bridges_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'bridges.geojson')
+    bridge_mask_img = None
     if os.path.exists(bridges_path):
-        with open(bridges_path, 'r', encoding='utf-8') as f:
-            bridges_json = json.load(f)
+        bridges_gdf = gpd.read_file(bridges_path)
+        if bridges_gdf.crs is None:
+            bridges_gdf.set_crs("EPSG:4326", inplace=True)
+        # Buffer bridges by 100m in UTM EPSG:32648
+        bridges_buf_gdf = bridges_gdf.to_crs("EPSG:32648").buffer(100).to_crs("EPSG:4326")
+        bridges_json = json.loads(bridges_buf_gdf.to_json())
         bridges_fc = ee.FeatureCollection(bridges_json)
         bridge_mask_img = ee.Image(0).paint(bridges_fc, 1)
         reach2_water = reach2_water.where(bridge_mask_img.eq(1), 1)
-        print("[Bridge Piercing] Applied manual bridge water override to pierce straight through bridges.")
+        print("[Bridge Piercing] Applied 100m buffered bridge water override for Thang Long & Chuong Duong bridges.")
     
     calibrated_water = calibrate_s1_water_mask(reach2_water.rename('classification'), composite_r2, s2_ref_gdf)
+    if bridge_mask_img is not None:
+        calibrated_water = calibrated_water.where(bridge_mask_img.eq(1), 1)
+
     water_refined, _, _ = refine_classification(
         calibrated_water, reach2_ee_geom, centerline_fc,
         open_radius=SHORELINE_OPEN_SIZE, close_radius=SHORELINE_CLOSE_SIZE
     )
+    if bridge_mask_img is not None:
+        water_refined = water_refined.where(bridge_mask_img.eq(1), 1)
     
     scale = 20
     raw_gdf, _, _ = extract_shared_boundary(
