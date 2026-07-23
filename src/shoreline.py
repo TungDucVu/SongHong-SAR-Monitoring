@@ -1423,3 +1423,113 @@ def calibrate_s1_water_mask(classified, composite, s2_ref_gdf):
     calibrated_classified = classified.where(s2_guided_water, 1)
     
     return calibrated_classified
+
+def generate_reach_interactive_map(extracted_gdf, s2_ref_gdf, val_stats, reach_title, year, season, output_html_path):
+    """
+    Generates a dedicated interactive HTML map for a single Reach, displaying:
+    1. Google Satellite & OpenStreetMap basemaps
+    2. S2 Reference Shoreline (Ground Truth)
+    3. S1 Extracted Shoreline
+    4. Validation Error Mask Layer (Point-by-point spatial error colored by magnitude)
+    """
+    import folium
+    from folium.plugins import MousePosition
+    import geopandas as gpd
+
+    center_lat, center_lon = 21.04, 105.86
+    if not extracted_gdf.empty:
+        bounds = extracted_gdf.to_crs("EPSG:4326").total_bounds
+        center_lon = (bounds[0] + bounds[2]) / 2.0
+        center_lat = (bounds[1] + bounds[3]) / 2.0
+
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=11, control_scale=True)
+    folium.LatLngPopup().add_to(m)
+    MousePosition().add_to(m)
+
+    folium.TileLayer(
+        tiles='https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+        attr='Google Satellite',
+        name='Google Satellite',
+        overlay=False,
+        control=True
+    ).add_to(m)
+
+    if not s2_ref_gdf.empty:
+        s2_wgs = s2_ref_gdf.to_crs("EPSG:4326")
+        folium.GeoJson(
+            s2_wgs,
+            name='Sentinel-2 Reference Shoreline (Ground Truth)',
+            style_function=lambda x: {'color': '#ff7800', 'weight': 2.5, 'dashArray': '5, 5', 'opacity': 0.9}
+        ).add_to(m)
+
+    if not extracted_gdf.empty:
+        s1_wgs = extracted_gdf.to_crs("EPSG:4326")
+        folium.GeoJson(
+            s1_wgs,
+            name=f'Sentinel-1 Extracted Shoreline ({reach_title})',
+            style_function=lambda x: {'color': '#00ffff', 'weight': 3.0, 'opacity': 0.9}
+        ).add_to(m)
+
+    ext_points = val_stats.get('ext_points_info', [])
+    if ext_points:
+        error_group = folium.FeatureGroup(name='Validation Error Mask (Error Magnitude Points)', show=True)
+        pts_gdf = gpd.GeoDataFrame(
+            [{'distance': p['distance']} for p in ext_points],
+            geometry=[p['point'] for p in ext_points],
+            crs="EPSG:32648"
+        ).to_crs("EPSG:4326")
+
+        for idx, row in pts_gdf.iterrows():
+            dist = row['distance']
+            pt = row.geometry
+            
+            if dist < 10.0:
+                color = '#00ff00'
+                radius = 3
+            elif dist < 30.0:
+                color = '#ffff00'
+                radius = 4
+            elif dist < 50.0:
+                color = '#ff8c00'
+                radius = 5
+            else:
+                color = '#ff0000'
+                radius = 6
+
+            folium.CircleMarker(
+                location=[pt.y, pt.x],
+                radius=radius,
+                color=color,
+                fill=True,
+                fill_color=color,
+                fill_opacity=0.8,
+                popup=f"<b>Reach:</b> {reach_title}<br><b>Error Distance:</b> {dist:.1f} m"
+            ).add_to(error_group)
+
+        error_group.add_to(m)
+
+    mean_e = val_stats.get('mean_dist_m', 0.0)
+    rmse_e = val_stats.get('rmse_dist_m', 0.0)
+    p95_e = val_stats.get('p95_dist_m', 0.0)
+
+    legend_html = f'''
+    <div style="position: fixed; bottom: 30px; left: 30px; width: 280px; z-index:9999; background-color: rgba(20,20,20,0.85);
+                color: white; border: 2px solid #555; border-radius: 8px; padding: 12px; font-size: 13px; font-family: sans-serif;">
+        <h4 style="margin: 0 0 8px 0; color: #00ffff;">{reach_title} ({year} {season.upper()})</h4>
+        <div><b>Mean Error:</b> {mean_e:.2f} m</div>
+        <div><b>RMSE Error:</b> {rmse_e:.2f} m</div>
+        <div><b>P95 Error:</b> {p95_e:.2f} m</div>
+        <hr style="border-color: #444; margin: 8px 0;">
+        <div style="font-weight: bold; margin-bottom: 4px;">Validation Error Mask:</div>
+        <div><span style="color:#00ff00;">●</span> &lt; 10m (Cao)</div>
+        <div><span style="color:#ffff00;">●</span> 10m - 30m (Tốt)</div>
+        <div><span style="color:#ff8c00;">●</span> 30m - 50m (Chấp nhận)</div>
+        <div><span style="color:#ff0000;">●</span> &gt; 50m (Lỗi lớn)</div>
+    </div>
+    '''
+    m.get_root().html.add_child(folium.Element(legend_html))
+    folium.LayerControl().add_to(m)
+
+    m.save(output_html_path)
+    print(f"[Interactive Map] Saved reach interactive map with validation error mask to: {output_html_path}")
+

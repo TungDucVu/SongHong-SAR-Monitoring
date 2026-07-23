@@ -33,14 +33,15 @@ from src.config import (
     GEE_PROJECT, SHORELINE_OPEN_SIZE, 
     SHORELINE_CLOSE_SIZE, SHORELINE_CONFIG, OUTPUT_DIR
 )
-from src.aoi import get_aoi_geometry, load_local_aoi
+from src.aoi import get_aoi_geometry, load_local_aoi, load_reach_aoi
 from src.classification import train_classifier, classify_image, calculate_derived_polarizations, calculate_glcm_textures
 from src.shoreline import (
     get_continuous_centerline, load_centerline,
     extract_shared_boundary, clean_shoreline_graph,
     smooth_and_simplify_shoreline, validate_shoreline,
     load_manual_bridges, calibrate_s1_water_mask,
-    generate_validation_shoreline_s2, refine_classification
+    generate_validation_shoreline_s2, refine_classification,
+    generate_reach_interactive_map
 )
 from src.collection import create_seasonal_composite
 
@@ -215,7 +216,7 @@ def generate_hard_negative_training_samples(ref_class_img, reach1_ee_geom, num_p
     
     return boundary_samples.merge(interior_samples)
 
-def run_pipeline_for_reach1(season, reach1_ee_geom, reach1_corridor_utm, reach1_line_utm, centerline_fc, bridges_gdf, year=2024):
+def run_pipeline_for_reach1(season, reach1_ee_geom, reach1_corridor_utm, centerline_fc, bridges_gdf, year=2024):
     print(f"\n=============================================================")
     print(f" REACH 1 LOCAL RF EXECUTION (YEAR: {year}, SEASON: {season.upper()})")
     print("=============================================================")
@@ -294,6 +295,17 @@ def run_pipeline_for_reach1(season, reach1_ee_geom, reach1_corridor_utm, reach1_
         
     val_stats = validate_shoreline(smoothed_gdf, s2_ref_gdf)
     
+    html_out_path = os.path.join(output_dir, f"reach1_interactive_map_{year}_{season}.html")
+    generate_reach_interactive_map(
+        extracted_gdf=smoothed_gdf,
+        s2_ref_gdf=s2_ref_gdf,
+        val_stats=val_stats,
+        reach_title="Reach 1 (Thượng lưu Ba Vì)",
+        year=year,
+        season=season,
+        output_html_path=html_out_path
+    )
+    
     stats_summary = {
         'Season': season,
         'Points': val_stats.get('num_points', 0),
@@ -319,22 +331,16 @@ def main():
     total_len = centerline_geom_utm.length
     limit1 = centerline_geom_utm.project(Point(105.5415, 21.1528))
     
-    reach1_line_utm = substring(centerline_geom_utm, 0.0, limit1)
-    
-    aoi_geojson = load_local_aoi()
-    aoi_gdf = gpd.GeoDataFrame.from_features(aoi_geojson['features'], crs="EPSG:4326")
-    aoi_utm = aoi_gdf.to_crs("EPSG:32648").geometry.union_all()
-    
-    reach1_corridor_utm = reach1_line_utm.buffer(2000).intersection(aoi_utm)
-    reach1_corridor_wgs84 = gpd.GeoDataFrame(geometry=[reach1_corridor_utm], crs="EPSG:32648").to_crs("EPSG:4326").geometry.iloc[0]
-    reach1_geojson = json.loads(gpd.GeoSeries([reach1_corridor_wgs84]).to_json())
+    reach1_geojson = load_reach_aoi(1)
+    reach1_gdf = gpd.GeoDataFrame.from_features(reach1_geojson['features'], crs="EPSG:4326")
+    reach1_corridor_utm = reach1_gdf.to_crs("EPSG:32648").geometry.union_all()
     reach1_ee_geom = ee.Geometry(reach1_geojson['features'][0]['geometry'])
     
     bridges_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'bridges.geojson')
     bridges_gdf = load_manual_bridges(bridges_path)
     
-    dry_stats = run_pipeline_for_reach1(season='dry', reach1_ee_geom=reach1_ee_geom, reach1_corridor_utm=reach1_corridor_utm, reach1_line_utm=reach1_line_utm, centerline_fc=centerline_fc, bridges_gdf=bridges_gdf, year=2024)
-    wet_stats = run_pipeline_for_reach1(season='wet', reach1_ee_geom=reach1_ee_geom, reach1_corridor_utm=reach1_corridor_utm, reach1_line_utm=reach1_line_utm, centerline_fc=centerline_fc, bridges_gdf=bridges_gdf, year=2024)
+    dry_stats = run_pipeline_for_reach1(season='dry', reach1_ee_geom=reach1_ee_geom, reach1_corridor_utm=reach1_corridor_utm, centerline_fc=centerline_fc, bridges_gdf=bridges_gdf, year=2024)
+    wet_stats = run_pipeline_for_reach1(season='wet', reach1_ee_geom=reach1_ee_geom, reach1_corridor_utm=reach1_corridor_utm, centerline_fc=centerline_fc, bridges_gdf=bridges_gdf, year=2024)
     
     print("\n--- REACH 1 RUN COMPLETE ---")
 

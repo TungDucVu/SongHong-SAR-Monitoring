@@ -21,9 +21,18 @@ def plot_hybrid_map(year, season, output_path):
     reach1_s1_path = os.path.join(OUTPUT_DIR, f"reach1_s1_shoreline_{year}_{season}.geojson")
     reach1_s2_path = os.path.join(OUTPUT_DIR, f"reach1_s2_ref_{year}_{season}.geojson")
     
-    # Load Reach 2&3 data
-    reach23_s1_path = os.path.join(OUTPUT_DIR, f"shoreline_{year}_{season}_final.geojson")
-    reach23_s2_path = os.path.join(OUTPUT_DIR, f"shoreline_{year}_{season}_s2_ref.geojson")
+    # Load Reach 2 data
+    reach2_s1_path = os.path.join(OUTPUT_DIR, f"reach2_s1_shoreline_{year}_{season}.geojson")
+    reach2_s2_path = os.path.join(OUTPUT_DIR, f"reach2_s2_ref_{year}_{season}.geojson")
+    
+    # Load Reach 3 data (fallback to shoreline_{year}_{season}_final.geojson if reach3 file not present)
+    reach3_s1_path = os.path.join(OUTPUT_DIR, f"reach3_s1_shoreline_{year}_{season}.geojson")
+    if not os.path.exists(reach3_s1_path):
+        reach3_s1_path = os.path.join(OUTPUT_DIR, f"shoreline_{year}_{season}_final.geojson")
+        
+    reach3_s2_path = os.path.join(OUTPUT_DIR, f"reach3_s2_ref_{year}_{season}.geojson")
+    if not os.path.exists(reach3_s2_path):
+        reach3_s2_path = os.path.join(OUTPUT_DIR, f"shoreline_{year}_{season}_s2_ref.geojson")
     
     def add_geojson(path, name, color, weight, dash_array=None):
         if os.path.exists(path):
@@ -40,37 +49,48 @@ def plot_hybrid_map(year, season, output_path):
         else:
             print(f"[Warning] File not found: {path}")
 
-    # Add S2 References (Red for Reach 1, Orange for Reach 2&3)
+    # Add S2 References (Red for Reach 1, Orange for Reach 2, Coral for Reach 3)
     add_geojson(reach1_s2_path, "Reach 1: S2 Reference", '#e74c3c', 2, '5, 5')
-    add_geojson(reach23_s2_path, "Reach 2&3: S2 Reference", '#d35400', 2, '5, 5')
+    add_geojson(reach2_s2_path, "Reach 2: S2 Reference", '#d35400', 2, '5, 5')
+    add_geojson(reach3_s2_path, "Reach 3: S2 Reference", '#e67e22', 2, '5, 5')
     
-    # Add S1 Extracted Shorelines (Purple for Reach 1, Blue for Reach 2&3)
+    # Add S1 Extracted Shorelines (Purple for Reach 1, Blue for Reach 2, Teal for Reach 3)
     add_geojson(reach1_s1_path, "Reach 1: Local RF (S1)", '#8e44ad', 3)
-    add_geojson(reach23_s1_path, "Reach 2&3: Global RF (S1)", '#2980b9', 3)
+    add_geojson(reach2_s1_path, "Reach 2: Local RF (S1)", '#2980b9', 3)
+    add_geojson(reach3_s1_path, "Reach 3: Local RF (S1)", '#16a085', 3)
     
     # Legend
     legend_html = f"""
     <div style="position: fixed; 
-                bottom: 80px; left: 10px; width: 300px; height: 160px; 
-                z-index:9999; font-size:13px; background-color:rgba(255, 255, 255, 0.95);
-                border: 2px solid grey; border-radius: 6px; padding: 10px;
-                box-shadow: 2px 2px 5px rgba(0,0,0,0.2); font-family: sans-serif;">
-        <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; text-align: center;">Hybrid Shoreline Map - {year} {season.upper()}</h4>
+                bottom: 80px; left: 10px; width: 310px; height: 210px; 
+                z-index:9999; font-size:13px; background-color:rgba(20, 20, 20, 0.90);
+                color: white; border: 2px solid #555; border-radius: 8px; padding: 10px;
+                box-shadow: 2px 2px 5px rgba(0,0,0,0.5); font-family: sans-serif;">
+        <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; text-align: center; color: #00ffff;">Hybrid 3-Reach Shoreline Map - {year} {season.upper()}</h4>
         <div style="display: flex; align-items: center; margin-bottom: 5px;">
             <div style="width: 16px; height: 3px; background-color: #8e44ad; margin-right: 8px;"></div>
-            <span>Reach 1: S1 (Local RF)</span>
+            <span>Reach 1: Upper (Local RF Ba Vi)</span>
         </div>
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            <div style="width: 16px; height: 3px; background-color: #2980b9; margin-right: 8px;"></div>
+            <span>Reach 2: Middle (Local RF Hanoi Urban)</span>
+        </div>
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            <div style="width: 16px; height: 3px; background-color: #16a085; margin-right: 8px;"></div>
+            <span>Reach 3: Lower (Local RF Delta)</span>
+        </div>
+        <hr style="border-color: #444; margin: 6px 0;">
         <div style="display: flex; align-items: center; margin-bottom: 5px;">
             <div style="width: 16px; height: 3px; background-color: #e74c3c; margin-right: 8px; border-bottom: 2px dashed white;"></div>
             <span>Reach 1: S2 Reference</span>
         </div>
         <div style="display: flex; align-items: center; margin-bottom: 5px;">
-            <div style="width: 16px; height: 3px; background-color: #2980b9; margin-right: 8px;"></div>
-            <span>Reach 2&3: S1 (Global RF)</span>
+            <div style="width: 16px; height: 3px; background-color: #d35400; margin-right: 8px; border-bottom: 2px dashed white;"></div>
+            <span>Reach 2: S2 Reference</span>
         </div>
         <div style="display: flex; align-items: center; margin-bottom: 5px;">
-            <div style="width: 16px; height: 3px; background-color: #d35400; margin-right: 8px; border-bottom: 2px dashed white;"></div>
-            <span>Reach 2&3: S2 Reference</span>
+            <div style="width: 16px; height: 3px; background-color: #e67e22; margin-right: 8px; border-bottom: 2px dashed white;"></div>
+            <span>Reach 3: S2 Reference</span>
         </div>
     </div>
     """

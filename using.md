@@ -1,6 +1,6 @@
 # DANH MỤC CÁC TỆP SỬ DỤNG TRONG PIPELINE SẢN XUẤT CHÍNH THỨC (USING.MD)
 
-Tài liệu này niêm yết toàn bộ danh mục các tệp mã nguồn, dữ liệu, kịch bản thực thi và tài liệu cấu hình chính thức được duy trì và sử dụng trong hệ thống **SongHong-SAR-Monitoring**. Tất cả các tệp không nằm trong danh mục này đã được dọn dẹp để giữ cho thư mục làm việc của dự án tối giản và chuyên nghiệp.
+Tài liệu này niêm yết toàn bộ danh mục các tệp mã nguồn, dữ liệu, kịch bản thực thi và tài liệu cấu hình chính thức được duy trì và sử dụng trong hệ thống **SongHong-SAR-Monitoring**.
 
 ---
 
@@ -8,9 +8,10 @@ Tài liệu này niêm yết toàn bộ danh mục các tệp mã nguồn, dữ 
 
 | Tệp Kịch bản | Vai trò & Mục đích | Trạng thái |
 | :--- | :--- | :---: |
-| [main_workflow/run_hybrid_pipeline.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/main_workflow/run_hybrid_pipeline.py) | **Master Script Tích hợp**: Khởi chạy toàn bộ quy trình lai kép cho Reach 1, Reach 2&3 và tự động xuất bản đồ HTML. | **Active** |
-| [main_workflow/run_reach1_local.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/main_workflow/run_reach1_local.py) | **Reach 1 Local RF Runner**: Mô hình Random Forest cục bộ phân loại đoạn Thượng lưu Ba Vì / Sơn Tây (Otsu 4-class, Hard Negative Mining, HAND/Slope). | **Active** |
-| [main_workflow/run_reach2_3_global.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/main_workflow/run_reach2_3_global.py) | **Reach 2 & 3 Global RF Runner**: Mô hình Global Random Forest phân loại diện rộng 114km hành lang Hà Nội & Đồng bằng sông Hồng. | **Active** |
+| [main_workflow/run_hybrid_pipeline.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/main_workflow/run_hybrid_pipeline.py) | **Master Script Tích hợp (3 Reaches)**: Khởi chạy toàn bộ quy trình 3 mô hình lai ghép cho Reach 1, Reach 2, Reach 3 và tự động xuất bản đồ tương tác. | **Active** |
+| [main_workflow/run_reach1_local.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/main_workflow/run_reach1_local.py) | **Reach 1 Local RF Runner**: Mô hình Random Forest phân loại đoạn Thượng lưu Ba Vì / Sơn Tây (Otsu 4-class, Hard Negative Mining, HAND/Slope). | **Active** |
+| [main_workflow/run_reach2_local.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/main_workflow/run_reach2_local.py) | **Reach 2 Local RF Runner**: Mô hình Random Forest phân loại đoạn Trung lưu Hà Nội - tập trung phân loại bãi nổi/đảo nổi và bảo tồn đường bờ đô thị (bỏ qua can thiệp cầu). | **Active** |
+| [main_workflow/run_reach3_local.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/main_workflow/run_reach3_local.py) | **Reach 3 Local RF Runner**: Mô hình Random Forest phân loại đoạn Hạ lưu Đồng bằng nông nghiệp. | **Active** |
 
 ---
 
@@ -18,7 +19,7 @@ Tài liệu này niêm yết toàn bộ danh mục các tệp mã nguồn, dữ 
 
 | Tệp Mã nguồn | Mô tả Chức năng | Trạng thái |
 | :--- | :--- | :---: |
-| [src/shoreline.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/src/shoreline.py) | Thuật toán trích xuất ranh giới chung, làm sạch đồ thị, làm mịn Chaikin & kiểm định sai số. | **Active** |
+| [src/shoreline.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/src/shoreline.py) | Thuật toán trích xuất ranh giới chung, làm sạch đồ thị, làm mịn Chaikin, kiểm định sai số & tự động sinh bản đồ tương tác cho từng Reach. | **Active** |
 | [src/classification.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/src/classification.py) | Huấn luyện Random Forest, tạo GLCM textures (Contrast, Variance, Entropy, ASM) & phân loại ảnh ra-đa. | **Active** |
 | [src/preprocessing.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/src/preprocessing.py) | Khử nhiễu đốm Refined Lee Filter cho ảnh Sentinel-1 SAR. | **Active** |
 | [src/collection.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/src/collection.py) | Lọc và ghép ảnh Sentinel-1 composite theo mùa (Dry / Wet Season Median Composites). | **Active** |
@@ -33,7 +34,7 @@ Tài liệu này niêm yết toàn bộ danh mục các tệp mã nguồn, dữ 
 
 | Tệp Tiện ích | Vai trò & Mục đích | Trạng thái |
 | :--- | :--- | :---: |
-| [scripts/plot_hybrid_map.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/scripts/plot_hybrid_map.py) | Tự động đọc dữ liệu GeoJSON 3 Reach và tạo bản đồ tương tác HTML Folium. | **Active** |
+| [scripts/plot_hybrid_map.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/scripts/plot_hybrid_map.py) | Đọc dữ liệu GeoJSON 3 Reach và tạo bản đồ tương tác HTML Folium tổng hợp 3 phân đoạn. | **Active** |
 | [scripts/expand_training_polys.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/scripts/expand_training_polys.py) | Mở rộng và chuẩn hóa tập đa giác mẫu huấn luyện cho Random Forest. | **Active** |
 | [scripts/download_s2_water_masks.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/scripts/download_s2_water_masks.py) | Tải và lưu trữ cache dữ liệu tham chiếu Sentinel-2 NDWI. | **Active** |
 | [scripts/generate_osm_based_aoi.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/scripts/generate_osm_based_aoi.py) | Dựng AOI hành lang sông từ OpenStreetMap. | **Active** |
@@ -50,17 +51,16 @@ Tài liệu này niêm yết toàn bộ danh mục các tệp mã nguồn, dữ 
 
 ---
 
-## 5. TỆP ĐẦU RA SẢN XUẤT THU GỌN (`outputs/`)
+## 5. TỆP ĐẦU RA SẢN XUẤT CHÍNH THỨC (`outputs/`)
 
-Toàn bộ các tệp `.tif` raster nặng và tệp HTML debug tạm thời đã được làm sạch. Thư mục `outputs/` chỉ giữ lại các tệp sản xuất cuối cùng:
-
-- 🗺️ **[outputs/hybrid_shoreline_map_2024_dry.html](file:///d:/Future%20Career/SongHong-SAR-Monitoring/outputs/hybrid_shoreline_map_2024_dry.html)**: Bản đồ tương tác Hybrid Mùa Khô 2024.
-- 🗺️ **[outputs/hybrid_shoreline_map_2024_wet.html](file:///d:/Future%20Career/SongHong-SAR-Monitoring/outputs/hybrid_shoreline_map_2024_wet.html)**: Bản đồ tương tác Hybrid Mùa Mưa 2024.
-- 🗺️ **`outputs/shoreline_2024_*_final.geojson`**: GeoJSON đường bờ Sentinel-1 sản xuất chính thức.
-- 🗺️ **`outputs/shoreline_2024_*_s2_ref.geojson`**: GeoJSON đường bờ tham chiếu Sentinel-2.
-- 📊 **`outputs/error_histogram_2024_*.png`**: Đồ thị Phân bố Sai số Khoảng cách.
-- 📊 **`outputs/error_cdf_2024_*.png`**: Đồ thị Phân bố Tích lũy Sai số (Empirical CDF).
-- 📈 **`outputs/reach_validation_statistics_2024_*.csv`**: Bảng thống kê sai số kiểm định theo từng Reach.
+- 🗺️ **[outputs/hybrid_shoreline_map_2024_dry.html](file:///d:/Future%20Career/SongHong-SAR-Monitoring/outputs/hybrid_shoreline_map_2024_dry.html)**: Bản đồ tương tác Tổng hợp 3 Reach Mùa Khô 2024.
+- 🗺️ **[outputs/hybrid_shoreline_map_2024_wet.html](file:///d:/Future%20Career/SongHong-SAR-Monitoring/outputs/hybrid_shoreline_map_2024_wet.html)**: Bản đồ tương tác Tổng hợp 3 Reach Mùa Mưa 2024.
+- 🗺️ **`outputs/reach1_interactive_map_2024_*.html`**: Bản đồ tương tác độc lập Reach 1 kèm **Validation Error Mask**.
+- 🗺️ **`outputs/reach2_interactive_map_2024_*.html`**: Bản đồ tương tác độc lập Reach 2 kèm **Validation Error Mask**.
+- 🗺️ **`outputs/reach3_interactive_map_2024_*.html`**: Bản đồ tương tác độc lập Reach 3 kèm **Validation Error Mask**.
+- 🗺️ **`outputs/reach1_s1_shoreline_2024_*.geojson`**: GeoJSON đường bờ Sentinel-1 Reach 1.
+- 🗺️ **`outputs/reach2_s1_shoreline_2024_*.geojson`**: GeoJSON đường bờ Sentinel-1 Reach 2.
+- 🗺️ **`outputs/reach3_s1_shoreline_2024_*.geojson`**: GeoJSON đường bờ Sentinel-1 Reach 3.
 
 ---
 

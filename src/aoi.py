@@ -37,6 +37,26 @@ def get_aoi_geometry(project_id=None):
     """
     return get_aoi_collection(project_id).geometry()
 
+def load_reach_aoi(reach_num):
+    """
+    Loads reach-specific GeoJSON file (aoi_reach1.geojson, aoi_reach2.geojson, aoi_reach3.geojson)
+    and returns it as a Python dict.
+    """
+    reach_path = os.path.join(os.path.dirname(AOI_GEOJSON_PATH), f"aoi_reach{reach_num}.geojson")
+    if not os.path.exists(reach_path):
+        raise FileNotFoundError(f"Reach AOI file not found at: {reach_path}")
+    with open(reach_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+def get_reach_ee_geometry(reach_num, project_id=None):
+    """
+    Returns ee.Geometry for a specific Reach (1, 2, or 3).
+    """
+    if not ee.data.is_initialized():
+        ee.Initialize(project=project_id)
+    reach_data = load_reach_aoi(reach_num)
+    return ee.Geometry(reach_data['features'][0]['geometry'])
+
 def sync_aoi_to_assets(project_id=None):
     """
     Checks if AOI exists in GEE Assets. If not, submits an Export task to upload it.
