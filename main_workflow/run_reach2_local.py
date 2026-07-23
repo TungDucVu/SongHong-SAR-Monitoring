@@ -73,6 +73,16 @@ def run_pipeline_for_reach2(year=2024, season='dry'):
     classified_r2, _ = classify_image(composite_r2.clip(reach2_ee_geom), r2_classifier, GLOBAL_FEATURES)
     reach2_water = classified_r2.eq(1)
     
+    # Load manual bridge polygons and override bridge areas to water (piercing through bridges)
+    bridges_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'bridges.geojson')
+    if os.path.exists(bridges_path):
+        with open(bridges_path, 'r', encoding='utf-8') as f:
+            bridges_json = json.load(f)
+        bridges_fc = ee.FeatureCollection(bridges_json)
+        bridge_mask_img = ee.Image(0).paint(bridges_fc, 1)
+        reach2_water = reach2_water.where(bridge_mask_img.eq(1), 1)
+        print("[Bridge Piercing] Applied manual bridge water override to pierce straight through bridges.")
+    
     calibrated_water = calibrate_s1_water_mask(reach2_water.rename('classification'), composite_r2, s2_ref_gdf)
     water_refined, _, _ = refine_classification(
         calibrated_water, reach2_ee_geom, centerline_fc,
