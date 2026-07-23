@@ -111,7 +111,9 @@ def run_pipeline_for_reach2(year=2024, season='dry'):
         
     val_stats = validate_shoreline(smoothed_gdf, s2_ref_gdf)
     
-    html_out_path = os.path.join(output_dir, f"reach2_interactive_map_{year}_{season}.html")
+    map_dir = os.path.join(output_dir, "map")
+    os.makedirs(map_dir, exist_ok=True)
+    html_out_path = os.path.join(map_dir, f"reach2_interactive_map_{year}_{season}.html")
     generate_reach_interactive_map(
         extracted_gdf=smoothed_gdf,
         s2_ref_gdf=s2_ref_gdf,
@@ -125,11 +127,11 @@ def run_pipeline_for_reach2(year=2024, season='dry'):
     stats_summary = {
         'Season': season,
         'Points': val_stats.get('num_points', 0),
-        'Mean': round(val_stats.get('mean_distance_m', 0.0), 2),
-        'Median': round(val_stats.get('median_distance_m', 0.0), 2),
-        'RMSE': round(val_stats.get('rmse_distance_m', 0.0), 2),
-        'Hausdorff': round(val_stats.get('hausdorff_distance_m', 0.0), 2),
-        'P95': round(val_stats.get('percentile_95_m', 0.0), 2),
+        'Mean': round(val_stats.get('mean_dist_m', 0.0), 2),
+        'Median': round(val_stats.get('median_dist_m', 0.0), 2),
+        'RMSE': round(val_stats.get('rmse_dist_m', 0.0), 2),
+        'Hausdorff': round(val_stats.get('hausdorff_dist_m', 0.0), 2),
+        'P95': round(val_stats.get('p95_dist_m', 0.0), 2),
         'RuntimeSec': round(time.time() - start_time, 1)
     }
     

@@ -23,4 +23,4 @@ This report evaluates the accuracy metrics for **Reach 2 (Middle Reach - Hanoi U
 ## 3. Output Assets
 - **Final GeoJSON Output**: [outputs/shoreline_2024_dry_final.geojson](file:///d:/Future%20Career/SongHong-SAR-Monitoring/outputs/shoreline_2024_dry_final.geojson)
 - **S2 Reference GeoJSON**: [outputs/shoreline_2024_dry_s2_ref.geojson](file:///d:/Future%20Career/SongHong-SAR-Monitoring/outputs/shoreline_2024_dry_s2_ref.geojson)
-- **Unified Hybrid Map (All Reaches)**: [outputs/hybrid_shoreline_map_2024_dry.html](file:///d:/Future%20Career/SongHong-SAR-Monitoring/outputs/hybrid_shoreline_map_2024_dry.html)
+- **Unified Hybrid Map (All Reaches)**: [outputs/map/hybrid_shoreline_map_2024_dry.html](file:///d:/Future%20Career/SongHong-SAR-Monitoring/outputs/map/hybrid_shoreline_map_2024_dry.html)

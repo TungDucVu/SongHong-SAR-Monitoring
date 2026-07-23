@@ -108,6 +108,7 @@ if __name__ == "__main__":
     parser.add_argument("--year", type=int, default=2024)
     args = parser.parse_args()
     
-    os.makedirs("outputs", exist_ok=True)
-    plot_hybrid_map(args.year, "dry", f"outputs/hybrid_shoreline_map_{args.year}_dry.html")
-    plot_hybrid_map(args.year, "wet", f"outputs/hybrid_shoreline_map_{args.year}_wet.html")
+    map_dir = os.path.join("outputs", "map")
+    os.makedirs(map_dir, exist_ok=True)
+    plot_hybrid_map(args.year, "dry", os.path.join(map_dir, f"hybrid_shoreline_map_{args.year}_dry.html"))
+    plot_hybrid_map(args.year, "wet", os.path.join(map_dir, f"hybrid_shoreline_map_{args.year}_wet.html"))

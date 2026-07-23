@@ -53,11 +53,11 @@ Tài liệu này niêm yết toàn bộ danh mục các tệp mã nguồn, dữ 
 
 ## 5. TỆP ĐẦU RA SẢN XUẤT CHÍNH THỨC (`outputs/`)
 
-- 🗺️ **[outputs/hybrid_shoreline_map_2024_dry.html](file:///d:/Future%20Career/SongHong-SAR-Monitoring/outputs/hybrid_shoreline_map_2024_dry.html)**: Bản đồ tương tác Tổng hợp 3 Reach Mùa Khô 2024.
-- 🗺️ **[outputs/hybrid_shoreline_map_2024_wet.html](file:///d:/Future%20Career/SongHong-SAR-Monitoring/outputs/hybrid_shoreline_map_2024_wet.html)**: Bản đồ tương tác Tổng hợp 3 Reach Mùa Mưa 2024.
-- 🗺️ **`outputs/reach1_interactive_map_2024_*.html`**: Bản đồ tương tác độc lập Reach 1 kèm **Validation Error Mask**.
-- 🗺️ **`outputs/reach2_interactive_map_2024_*.html`**: Bản đồ tương tác độc lập Reach 2 kèm **Validation Error Mask**.
-- 🗺️ **`outputs/reach3_interactive_map_2024_*.html`**: Bản đồ tương tác độc lập Reach 3 kèm **Validation Error Mask**.
+- 🗺️ **[outputs/map/hybrid_shoreline_map_2024_dry.html](file:///d:/Future%20Career/SongHong-SAR-Monitoring/outputs/map/hybrid_shoreline_map_2024_dry.html)**: Bản đồ tương tác Tổng hợp 3 Reach Mùa Khô 2024.
+- 🗺️ **[outputs/map/hybrid_shoreline_map_2024_wet.html](file:///d:/Future%20Career/SongHong-SAR-Monitoring/outputs/map/hybrid_shoreline_map_2024_wet.html)**: Bản đồ tương tác Tổng hợp 3 Reach Mùa Mưa 2024.
+- 🗺️ **`outputs/map/reach1_interactive_map_2024_*.html`**: Bản đồ tương tác độc lập Reach 1 kèm **Validation Error Mask**.
+- 🗺️ **`outputs/map/reach2_interactive_map_2024_*.html`**: Bản đồ tương tác độc lập Reach 2 kèm **Validation Error Mask**.
+- 🗺️ **`outputs/map/reach3_interactive_map_2024_*.html`**: Bản đồ tương tác độc lập Reach 3 kèm **Validation Error Mask**.
 - 🗺️ **`outputs/reach1_s1_shoreline_2024_*.geojson`**: GeoJSON đường bờ Sentinel-1 Reach 1.
 - 🗺️ **`outputs/reach2_s1_shoreline_2024_*.geojson`**: GeoJSON đường bờ Sentinel-1 Reach 2.
 - 🗺️ **`outputs/reach3_s1_shoreline_2024_*.geojson`**: GeoJSON đường bờ Sentinel-1 Reach 3.
