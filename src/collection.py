@@ -43,45 +43,49 @@ def get_seasonal_s1_collection(year, season, aoi_geometry):
         
     return s1_filtered
 
-def create_seasonal_composite(year, season, aoi_geometry):
+def create_seasonal_composite(year, season, aoi_geometry, reducer_type='percentile_10', force_on_the_fly=True):
     """
-    Creates a speckle-filtered, derived-feature-rich seasonal median composite clipped to the AOI.
+    Creates a speckle-filtered, derived-feature-rich seasonal composite clipped to the AOI.
+    Supports multi-temporal 10th percentile reduction (Option A/B) for superior wave and silt suppression.
     """
     asset_path = f"projects/songhong-sar-monitoring/assets/s1_composite_{year}_{season}"
-    try:
-        composite = ee.Image(asset_path)
-        # Check if the asset actually exists and has bands
-        bands = composite.bandNames().getInfo()
-        print(f"[Collection] Loaded pre-calculated composite asset: {asset_path}")
-        size = 15
+    if not force_on_the_fly and reducer_type == 'median':
         try:
-            size = composite.get('image_count').getInfo()
-        except:
-            pass
-        s1_dates_sorted = []
-        try:
-            s1_dates_json = composite.get('s1_dates_json').getInfo()
-            import json
-            s1_dates_sorted = json.loads(s1_dates_json)
-        except:
-            pass
-            
-        print(f"\nSentinel-1 {season.capitalize()}")
-        print(f"Images: {len(s1_dates_sorted)}")
-        for d in s1_dates_sorted:
-            print(f"  {d}")
-            
-    except Exception as e:
-        print(f"[Collection] Pre-calculated asset not found ({e}). Generating on-the-fly...")
+            composite = ee.Image(asset_path)
+            bands = composite.bandNames().getInfo()
+            print(f"[Collection] Loaded pre-calculated composite asset: {asset_path}")
+            size = 15
+            try:
+                size = composite.get('image_count').getInfo()
+            except:
+                pass
+            s1_dates_sorted = []
+            try:
+                s1_dates_json = composite.get('s1_dates_json').getInfo()
+                import json
+                s1_dates_sorted = json.loads(s1_dates_json)
+            except:
+                pass
+                
+            print(f"\nSentinel-1 {season.capitalize()}")
+            print(f"Images: {len(s1_dates_sorted)}")
+            for d in s1_dates_sorted:
+                print(f"  {d}")
+                
+        except Exception as e:
+            print(f"[Collection] Asset load bypassed or unavailable ({e}). Generating on-the-fly...")
+            force_on_the_fly = True
+    else:
+        force_on_the_fly = True
+
+    if force_on_the_fly:
+        print(f"[Collection] Generating on-the-fly S1 composite with reducer_type='{reducer_type}'...")
         raw_col = get_seasonal_s1_collection(year, season, aoi_geometry)
-        
-        # Check size of collection
         size = raw_col.size().getInfo()
         if size == 0:
             print(f"[Warning] No images found for {year} {season} season!")
             return None
             
-        # Query and print Sentinel-1 image dates
         import json
         try:
             s1_dates = raw_col.aggregate_array('system:time_start').map(
@@ -92,18 +96,18 @@ def create_seasonal_composite(year, season, aoi_geometry):
             print(f"[Warning] Failed to fetch Sentinel-1 image list: {err}")
             s1_dates_sorted = []
             
-        print(f"\nSentinel-1 {season.capitalize()}")
-        print(f"Images: {len(s1_dates_sorted)}")
-        for d in s1_dates_sorted:
-            print(f"  {d}")
-            
-        # Apply border noise removal to each image
+        print(f"\nSentinel-1 {season.capitalize()} (Count: {len(s1_dates_sorted)})")
+        
         processed_col = raw_col.map(remove_border_noise)
         
-        # Calculate median composite
-        composite_raw = processed_col.median()
-        
-        # Apply Refined Lee filter once on the median composite (15x memory savings!)
+        if reducer_type == 'percentile_10':
+            print(f"[Collection] Applying 10th Percentile Reducer (P10) for wave/silt suppression...")
+            composite_raw = processed_col.select(['VV', 'VH', 'angle']).reduce(ee.Reducer.percentile([10])).rename(['VV', 'VH', 'angle'])
+        else:
+            composite_raw = processed_col.median()
+            
+        # Reproject composite_raw to 20m WGS84 grid to flatten GEE reduction tree and guarantee server-side stability
+        composite_raw = composite_raw.reproject(crs='EPSG:4326', scale=20)
         composite = refined_lee_filter(composite_raw)
 
     # Add derived features (Phase 2 Feature stack) on the unclipped composite

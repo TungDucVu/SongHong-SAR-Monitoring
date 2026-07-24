@@ -185,9 +185,9 @@ def refine_classification(classified, aoi_geometry, centerline_fc=None, open_rad
       sand_mask_refined (ee.Image): Refined binary sand mask (0 or 1).
       qc_stats (dict): Earth Engine values containing count_before, count_after, and reduction_pct.
     """
-    # 1. Base binary masks
-    water_mask = classified.eq(1)
-    sand_mask = classified.eq(2)
+    # 1. Base binary masks reprojected to EPSG:32648 at 20m scale for GEE memory optimization
+    water_mask = classified.eq(1).reproject(crs='EPSG:32648', scale=20)
+    sand_mask = classified.eq(2).reproject(crs='EPSG:32648', scale=20)
     
     # 2. Majority Filter (Focal Mode 3x3 square)
     water_maj = water_mask.focalMode(radius=1.5, kernelType='square', units='pixels')
@@ -283,8 +283,8 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
     import rasterio
     from rasterio.features import shapes
     
-    # Ensure binary mask is strictly 0/1, not 1/no data
-    water_mask_unmasked = water_mask_refined.unmask(0).eq(1)
+    # Ensure binary mask is strictly 0/1, not 1/no data, and reproject to target CRS/scale for GEE graph optimization
+    water_mask_unmasked = water_mask_refined.unmask(0).eq(1).reproject(crs='EPSG:32648', scale=scale)
     
     # Restrict download to centerline 2km buffer bounding box to minimize memory/time
     buffer_geom = centerline_fc.geometry().buffer(2000)
@@ -293,6 +293,7 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
     print(f"[Phase 5] Requesting GEE download URL for refined water mask at {scale}m scale...")
     
     # Try up to 5 times with exponential backoff for GEE downloads
+    temp_tif = f"temp_water_mask_{year}_{season}.tif"
     for attempt in range(5):
         try:
             url = water_mask_unmasked.clip(buffer_geom).getDownloadURL({
@@ -303,10 +304,24 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
             })
             print(f"[Phase 5] Downloading refined water mask from GEE (attempt {attempt+1}/5)...")
             r = requests.get(url, timeout=300)
-            if r.status_code != 200:
-                print(f"[Error] GEE response text: {r.text}")
-            r.raise_for_status()
-            break
+            if r.status_code == 200:
+                with open(temp_tif, 'wb') as f:
+                    f.write(r.content)
+                break
+            else:
+                print(f"[Warning] Direct getDownloadURL memory limit reached: {r.text[:150]}. Retrying via geemap tiled exporter...")
+                import geemap
+                geemap.download_ee_image(
+                    image=water_mask_unmasked.clip(buffer_geom),
+                    filename=temp_tif,
+                    region=bbox.getInfo(),
+                    crs='EPSG:32648',
+                    scale=scale,
+                    max_tile_dim=512,
+                    num_threads=1,
+                    overwrite=True
+                )
+                break
         except Exception as e:
             if attempt == 4:
                 print(f"[Error] GEE download failed after 5 attempts: {e}")
@@ -316,8 +331,10 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
             time.sleep(wait_time)
         
     print(f"[Phase 5] Parsing GeoTIFF and polygonizing locally...")
-    with rasterio.open(io.BytesIO(r.content)) as src:
+    with rasterio.open(temp_tif) as src:
         raster_data = src.read(1)
+        transform = src.transform
+        crs = src.crs
         transform = src.transform
         
     # Morphological cleaning using scikit-image

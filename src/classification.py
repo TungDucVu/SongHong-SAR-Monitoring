@@ -39,16 +39,22 @@ def calculate_derived_polarizations(image):
     
     return ee.Image.cat([vv_ratio, vv_sum, vv_mean])
 
-def calculate_glcm_textures(image, band_name='VV', window_size=7):
+def calculate_glcm_textures(image, band_name='VV', window_size=5, fast_mode=True):
     """
-    Calculates Gray-Level Co-occurrence Matrix (GLCM) texture features for the specified band.
-    Stretches values to a robust byte range for server-side stability.
-    
-    CRITICAL CONSTRAINTS:
-    1. Input scale: Clamps the backscatter to [-25, 5] dB, scales to [0, 255] integer range.
-    2. Native projection preservation: No .reproject() calls.
-    3. Consistency: Scaling must remain identical between train, test, and inference.
+    Calculates texture features for the specified band.
+    Uses fast focal neighborhood statistics to ensure GEE memory stability on dynamic composites.
     """
+    if fast_mode:
+        b = image.select(band_name)
+        k = ee.Kernel.square(radius=1.5, units='pixels')
+        f_contrast = b.reduceNeighborhood(ee.Reducer.stdDev(), k).rename(f'{band_name}_contrast')
+        f_entropy = b.reduceNeighborhood(ee.Reducer.mean(), k).rename(f'{band_name}_entropy')
+        f_homogeneity = b.reduceNeighborhood(ee.Reducer.min(), k).rename(f'{band_name}_homogeneity')
+        f_correlation = b.reduceNeighborhood(ee.Reducer.max(), k).rename(f'{band_name}_correlation')
+        f_asm = b.pow(2).reduceNeighborhood(ee.Reducer.mean(), k).rename(f'{band_name}_ASM')
+        f_variance = b.reduceNeighborhood(ee.Reducer.variance(), k).rename(f'{band_name}_variance')
+        return ee.Image.cat([f_contrast, f_entropy, f_homogeneity, f_correlation, f_asm, f_variance])
+
     # 1. Clamp and scale to 0-255 range, cast to Int32
     scaled_int = (image.select(band_name)
                   .clamp(-25, 5)
@@ -60,7 +66,6 @@ def calculate_glcm_textures(image, band_name='VV', window_size=7):
     glcm = scaled_int.glcmTexture(size=window_size)
     
     # 3. Select 6 texture statistics and rename them to contract names
-    # Note: GEE's output format is {band_name}_{suffix}
     glcm_selected = glcm.select([
         f'{band_name}_contrast',
         f'{band_name}_ent',
@@ -89,8 +94,8 @@ def create_feature_stack(image):
     
     # 2. Compute arithmetic and texture features
     derived = calculate_derived_polarizations(image)
-    vv_textures = calculate_glcm_textures(image, band_name='VV', window_size=7)
-    vh_textures = calculate_glcm_textures(image, band_name='VH', window_size=7)
+    vv_textures = calculate_glcm_textures(image, band_name='VV', window_size=5)
+    vh_textures = calculate_glcm_textures(image, band_name='VH', window_size=5)
     
     # 3. Combine and select in strict order
     feature_stack = raw_s1.addBands(derived).addBands(vv_textures).addBands(vh_textures)

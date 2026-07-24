@@ -174,7 +174,37 @@ Kết quả kiểm chứng độc lập trên bộ dữ liệu mẫu năm 2024 (
 * **Reach 1 (Thượng lưu - Sơn Tây): Vùng biến động thủy văn phức tạp.**
   Reach 1 có biến động cao do cấu trúc lòng sông phân nhánh, bãi nổi lớn ngập theo chu kỳ xả lũ của thủy điện Hòa Bình. Tuy nhiên, sai số Median vẫn được kiểm soát tốt dưới $20\text{ m}$ ($19.96\text{ m}$), khẳng định hiệu quả của mô hình Random Forest phân đoạn local.
 
+#### 5.2.1. Bản đồ Phân tích Trực quan Địa lý theo Phân đoạn Sông (Mùa Khô vs Mùa Mưa)
+
+Dưới đây là các bản đồ trích xuất đường bờ Sentinel-1 SAR kết hợp lớp tham chiếu quang học Sentinel-2 cho từng Phân đoạn Sông Hồng thuộc phạm vi thử nghiệm năm 2024:
+
+##### A. Phân đoạn 1 (Reach 1 - Thượng lưu: Sơn Tây đến Ba Vì)
+![Bản đồ Reach 1 Mùa Khô 2024](./figures/reach1_dry.png)
+*Hình 9a: Bản đồ trích xuất đường bờ và bãi bồi Phân đoạn 1 (Reach 1) trong Mùa Khô năm 2024.*
+
+![Bản đồ Reach 1 Mùa Mưa 2024](./figures/reach1_wet.png)
+*Hình 9b: Bản đồ trích xuất đường bờ và ngập bãi bồi Phân đoạn 1 (Reach 1) trong Mùa Mưa năm 2024.*
+
 ---
+
+##### B. Phân đoạn 2 (Reach 2 - Trung lưu Nội đô Hà Nội: Nhật Tân đến Thanh Trì)
+![Bản đồ Reach 2 Mùa Khô 2024](./figures/reach2_dry.png)
+*Hình 10a: Bản đồ đường bờ Phân đoạn 2 (Reach 2 Nội đô) trong Mùa Khô năm 2024 (lộ rõ bãi giữa Nhật Tân và các kè bê tông).*
+
+![Bản đồ Reach 2 Mùa Mưa 2024](./figures/reach2_wet.png)
+*Hình 10b: Bản đồ đường bờ Phân đoạn 2 (Reach 2 Nội đô) trong Mùa Mưa năm 2024 (mực nước dâng cao ngập chân kè).*
+
+---
+
+##### C. Phân đoạn 3 (Reach 3 - Hạ lưu: Thường Tín đến Phú Xuyên)
+![Bản đồ Reach 3 Mùa Khô 2024](./figures/reach3_dry.png)
+*Hình 11a: Bản đồ đường bờ Phân đoạn 3 (Reach 3 Hạ lưu) trong Mùa Khô năm 2024 (đường bờ meander đạt độ chính xác < 1 pixel).*
+
+![Bản đồ Reach 3 Mùa Mưa 2024](./figures/reach3_wet.png)
+*Hình 11b: Bản đồ đường bờ Phân đoạn 3 (Reach 3 Hạ lưu) trong Mùa Mưa năm 2024.*
+
+---
+
 
 ### 5.3. Đánh giá Tỷ lệ Trùng khớp theo Vùng đệm (Buffer-Based Spatial Agreement - 2024)
 
@@ -232,15 +262,17 @@ Sự thay đổi diện tích phủ giữa mùa khô và mùa mưa trong năm th
 
 ## 6. KẾ HOẠCH TRIỂN KHAI TIẾP THEO & KIẾN NGHỊ (NEXT STEPS & RECOMMENDATIONS)
 
-### 6.1. Kế hoạch Khởi chạy Tự động Chuỗi Thời gian (2017 – 2026 Timeline Phase)
+### 6.1. Kế hoạch Khởi chạy Tự động Chuỗi Thời gian (2017 – 2026 Timeline Phase - Hạng mục Tuần 4)
 
-Sau khi nghiệm thu thành công các chỉ số thử nghiệm định lượng trên bộ mẫu đại diện năm 2024, nghiên cứu sẽ bước vào công đoạn triển khai quy mô lớn:
+Sau khi nghiệm thu thành công các chỉ số thử nghiệm định lượng trên bộ mẫu đại diện năm 2024, nghiên cứu triển khai công đoạn chính của Tuần 4:
 
-1. **Khởi chạy Pipeline tự động toàn chuỗi (Batch Execution):** Gửi các tác vụ tính toán tự động trên Google Earth Engine cho toàn bộ **317 cảnh ảnh Sentinel-1 SAR** giai đoạn 2017–2026.
+1. **Khởi chạy Full Composite tự động toàn chuỗi 10 năm (Batch Pipeline Execution):** 
+   - Tiến hành gom và tính toán ảnh **Full Composite (2017 – 2026)** cho toàn bộ **317 cảnh ảnh Sentinel-1 SAR Descending** trên Google Earth Engine.
+   - Trích xuất ảnh tổng hợp Median đại diện cho từng Mùa Khô và Mùa Mưa của 10 năm liên tiếp (2017 đến 2026).
 2. **Phân tích Động lực học theo Timeline 10 năm:**
-   * Trích xuất đường bờ sông Hồng theo từng mùa của 10 năm liên tiếp (2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026).
-   * Phân tích xu hướng xói lở / bồi tụ tích lũy (Net Shoreline Movement - NSM, End Point Rate - EPR) bằng công cụ DSAS (Digital Shoreline Analysis System).
-   * Đối chiếu với chuỗi số liệu vận hành thủy văn xả lũ từ các hồ chứa thượng nguồn (Hòa Bình, Sơn La) để đánh giá tác động của công trình nhân tạo.
+   - Trích xuất chuỗi đường bờ sông Hồng theo mốc thời gian từng năm.
+   - Tính toán các chỉ số xói lở / bồi tụ tích lũy (Net Shoreline Movement - NSM, End Point Rate - EPR) bằng công cụ DSAS (Digital Shoreline Analysis System).
+   - Đối chiếu với chuỗi số liệu vận hành thủy văn xả lũ từ các hồ chứa thượng nguồn (Hòa Bình, Sơn La) để đánh giá tác động của công trình nhân tạo theo thời gian.
 
 ---
 

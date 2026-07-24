@@ -204,6 +204,63 @@ Reach 3 (Lower - Mùa Mưa) & 14,011 & \textbf{7.25} & \textbf{17.49} & \textbf{
     \label{fig:reach_metrics}
 \end{figure}
 
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/reach1_dry.png}
+        \caption{Reach 1 - Mùa Khô 2024}
+        \label{fig:reach1_dry}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/reach1_wet.png}
+        \caption{Reach 1 - Mùa Mưa 2024}
+        \label{fig:reach1_wet}
+    \end{subfigure}
+    \caption{Bản đồ trích xuất đường bờ và bãi bồi Phân đoạn 1 (Reach 1 - Thượng lưu: Sơn Tây đến Ba Vì).}
+    \label{fig:reach1_maps}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/reach2_dry.png}
+        \caption{Reach 2 - Mùa Khô 2024}
+        \label{fig:reach2_dry}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/reach2_wet.png}
+        \caption{Reach 2 - Mùa Mưa 2024}
+        \label{fig:reach2_wet}
+    \end{subfigure}
+    \caption{Bản đồ trích xuất đường bờ và bãi bồi Phân đoạn 2 (Reach 2 - Trung lưu Nội đô Hà Nội).}
+    \label{fig:reach2_maps}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/reach3_dry.png}
+        \caption{Reach 3 - Mùa Khô 2024}
+        \label{fig:reach3_dry}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/reach3_wet.png}
+        \caption{Reach 3 - Mùa Mưa 2024}
+        \label{fig:reach3_wet}
+    \end{subfigure}
+    \caption{Bản đồ trích xuất đường bờ và bãi bồi Phân đoạn 3 (Reach 3 - Hạ lưu: Thường Tín đến Phú Xuyên).}
+    \label{fig:reach3_maps}
+\end{figure}
+
 \subsection{Đánh giá Tỷ lệ Trùng khớp theo Vùng đệm (Thử nghiệm 2024)}
 
 Tỷ lệ đường bờ SAR nằm trong các khoảng đệm kiểm chứng năm 2024 được thể hiện trên Hình \ref{fig:buffer_curve} và Bảng \ref{tab:buffer_stats}.
@@ -291,11 +348,11 @@ Reach 3 (Hạ lưu)    & $35.80$ & $48.30$ & \textbf{+34.92\%} & $18.90$ & $5.60
 \section{KẾ HOẠCH KẾ TIẾP \& KIẾN NGHỊ}
 % -------------------------------------------------------------
 
-\subsection{Kế hoạch Khởi chạy Tự động Chuỗi Thời gian (2017--2026 Timeline)}
-Sau khi hoàn thành thử nghiệm định lượng trên mẫu 2024, công đoạn tiếp theo bao gồm:
+\subsection{Kế hoạch Khởi chạy Tự động Chuỗi Thời gian (2017--2026 Timeline Phase - Hạng mục Tuần 4)}
+Sau khi hoàn thành thử nghiệm định lượng trên mẫu 2024, công đoạn chính triển khai trong Tuần 4 bao gồm:
 \begin{enumerate}
-    \item Khởi chạy tự động pipeline trên Google Earth Engine xử lý toàn bộ 317 cảnh ảnh Sentinel-1 SAR (2017--2026).
-    \item Trích xuất đường bờ chuỗi 10 năm và tiến hành phân tích biến động hình thái theo timeline (sử dụng các chỉ số NSM, EPR và DSAS).
+    \item Khởi chạy tự động quy trình \textbf{Full Composite (2017--2026)} cho toàn bộ 317 cảnh ảnh Sentinel-1 SAR trên Google Earth Engine, trích xuất ảnh tổng hợp Median từng mùa của 10 năm liên tiếp.
+    \item Trích xuất chuỗi đường bờ 10 năm và tiến hành phân tích biến động hình thái theo timeline (sử dụng các chỉ số NSM, EPR và DSAS) kết nối với số liệu thủy văn xả lũ từ các hồ chứa thượng nguồn.
 \end{enumerate}
 
 \subsection{Kiến nghị Ứng dụng}
