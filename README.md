@@ -29,15 +29,15 @@ Hệ thống thiết lập một quy trình viễn thám bán tự động trên
 * **Độ chính xác cao nhất tại Reach 3 (Hạ lưu - Phú Xuyên):** Sai số trung vị đạt mức lý tưởng **$6.16\text{ m}$** trong mùa khô ($< 1\text{ pixel}$), RMSE **$18.72\text{ m}$** (Dry) và **$25.72\text{ m}$** (Wet).
 * **Tỷ lệ trùng khớp Vùng đệm (Buffer Agreement):** Đạt **$91.24\%$** trong khoảng đệm $50\text{ m}$ và **$97.10\%$** trong khoảng đệm $100\text{ m}$ (Mùa khô 2024).
 
-![Hình 1: So sánh Sai số Vị trí Đường bờ theo Phân đoạn Sông Hồng](./REPORT/figures/fig1_reach_error_comparison.png)
+![Hình 1: So sánh Sai số Vị trí Đường bờ theo Phân đoạn Sông Hồng](./outputs/REPORT/figures/fig1_reach_error_comparison.png)
 
-![Hình 2: Đường cong Tỷ lệ trùng khớp theo Khoảng đệm](./REPORT/figures/fig2_buffer_accuracy_curve.png)
+![Hình 2: Đường cong Tỷ lệ trùng khớp theo Khoảng đệm](./outputs/REPORT/figures/fig2_buffer_accuracy_curve.png)
 
 ### 2. Động lực học Biến động Diện tích
 * **Mặt nước sông:** Mùa mưa diện tích mặt nước mở rộng thêm **$44.80\text{ km}^2$** (tương ứng tăng **$+38.49\%$**) trên toàn hành lang Hà Nội.
 * **Bãi bồi (Sandbars):** Tổng diện tích bãi nổi mùa khô đạt **$62.50\text{ km}^2$**. Khi chuyển sang mùa mưa, **$69.60\%$** diện tích bãi bồi bị ngập nước (chỉ còn lại $19.00\text{ km}^2$).
 
-![Hình 5: Biến động Diện tích Mặt nước và Bãi bồi](./REPORT/figures/fig5_water_sand_area_dynamics.png)
+![Hình 5: Biến động Diện tích Mặt nước và Bãi bồi](./outputs/REPORT/figures/fig5_water_sand_area_dynamics.png)
 
 ---
 
