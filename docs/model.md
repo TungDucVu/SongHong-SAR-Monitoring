@@ -1,163 +1,86 @@
-# SongHong Shoreline Extraction: Hybrid Model Configuration
+# SongHong Shoreline Extraction: Production Model Architecture (v1.0-OptionA-Production)
 
-This document defines the configuration, feature selection, and execution guidelines for the **Hybrid Shoreline Extraction Architecture** developed for the SongHong SAR monitoring pipeline. 
-
-The architecture is split into two distinct workflows to optimize the balance between computational complexity and local spatial accuracy.
+Tài liệu này định nghĩa chi tiết kiến trúc thuật toán, không gian đặc trưng (Feature Stack), bộ lọc không gian và quy chuẩn thực thi của mô hình trích xuất đường bờ lai ghép **Hybrid Random Forest** cho sông Hồng.
 
 ---
 
-## 1. Architectural Overview
+## 1. Sơ Đồ Kiến Trúc Hệ Thống (Architectural Pipeline)
 
 ```mermaid
 graph TD
-    A[Sentinel-1 Composite] --> B{Reach Segment}
-    B -->|Reach 1: Upper| C[Local RF Workflow]
-    B -->|Reach 2 & 3: Middle/Lower| D[Global RF Workflow]
+    A[Sentinel-1 Composite P10 Reducer] --> B{Phân Đoạn Sông Hồng}
+    B -->|Reach 1: Thượng lưu Sơn Tây| C[Mô hình Local RF + HAND/Slope Stack]
+    B -->|Reach 2: Trung lưu Đô thị Hà Nội| D[Mô hình Local RF + Bridge Piercing Capsule]
+    B -->|Reach 3: Hạ lưu Phú Xuyên| E[Mô hình Local RF + Flat Terrain Stack]
     
-    C --> C1[Local Training Samples]
-    C --> C2[Topographic Stack: HAND + Slope]
-    C --> C3[70/30 Boundary Hard Mining]
-    C --> C4[Train Local RF]
-    
-    D --> D1[Global Training Samples]
-    D --> D2[17-Band Texture & Polar Feature Stack]
-    D --> D3[Hyperparameter Tuning]
-    D --> D4[Train Tuned Global RF]
-    
-    C4 --> E[Local Calibration & Post-Processing]
-    D4 --> E
-    E --> F[Morphological Cleaning & Active Channel Buffer 150m]
-    F --> G[Douglas-Peucker & B-Spline Smoothing]
-    G --> H[Finalized Shorelines]
+    C & D & E --> F[Dự đoán Phân loại 4 Lớp: Water, Sand, Built-up, Vegetation]
+    F --> G[Xử lý Hình thái học: Focal Mode, Open, Close Filter]
+    G --> H[Mặt nạ Lòng dẫn Hoạt động: Active Channel Buffer 150m]
+    H --> I[Nối Bờ & Đơn giản hóa Đường bờ: Douglas-Peucker 15m & B-Spline]
+    I --> J[Kiểm định Sai số Vị trí KD-Tree & Xuất Báo cáo Outputs]
 ```
 
 ---
 
-## 2. Reach-Specific Model Configurations
+## 2. Cấu Hình Mô Hình Chi Tiết Theo Từng Phân Đoạn (Reach Configuration)
 
-### A. Reach 1 (Upper Reach - Ba Vì / Sơn Tây)
-* **Model Class**: `ee.Classifier.smileRandomForest`
-* **Target Area**: km 0.0 to km 57.28 (Upper segment, high topographic variation).
-* **Classifier Configuration**:
-  * `numberOfTrees`: 200
-  * `variablesPerSplit`: Default (`sqrt(features)`)
-  * `bagFraction`: 1.0
-  * `seed`: 42
-* **Feature Stack**:
-  * Polarizations: `VV`, `VH`
-  * Arithmetic Bands: `VV_ratio`, `VV_sum`, `VV_mean`
-  * Textures (7x7 GLCM): 6 VV-textures, 6 VH-textures
-  * **Topographic Bands (Reach 1 Specific)**: `HAND` (Height Above Nearest Drainage) and `SRTM Slope` (essential to suppress terrain/hill shadows).
-* **Training & Sampling Strategy**:
-  * **Self-Supervised Labeling**: Labels generated dynamically using local Otsu thresholding on Sentinel-2 MNDWI & BSI.
-  * **Hard Negative Mining**: Boundary-biased sampling with a **70/30 spatial split** towards sandbar-water interfaces to force trees to split cleanly at shoreline boundaries.
+### A. Reach 1 (Thượng lưu - Ba Vì / Sơn Tây / Phúc Thọ)
+* **Tọa độ / Đoạn sông**: km 0.0 đến km 57.28 (Vùng khúc uốn lớn, địa hình đồi núi phức tạp).
+* **Cấu hình Classifier**:
+  * Mô hình: `ee.Classifier.smileRandomForest(numberOfTrees=200)`
+  * Tỷ lệ phân tách nút: `sqrt(features)`
+* **Không gian đặc trưng (17 băng đặc trưng)**:
+  * Băng thô: `VV`, `VH`
+  * Băng số học: `VV_ratio`, `VV_sum`, `VV_mean`
+  * Fast Focal Textures ($3\times3$): `VV_contrast`, `VV_entropy`, `VV_homogeneity`, `VV_correlation`, `VV_ASM`, `VV_variance` (và 6 kênh tương tự cho `VH`).
+  * **Topographic Stack (Đặc thù Reach 1)**: Tích hợp `HAND` (Height Above Nearest Drainage) và `SRTM Slope` để khử bóng địa hình núi Ba Vì.
+* **Chiến lược lấy mẫu & Huấn luyện**:
+  * Tự động gán nhãn tự giám sát (Otsu 4-Class Thresholding trên Sentinel-2 MNDWI/BSI).
+  * Lấy mẫu tập trung ranh giới (70/30 Boundary Hard Mining) thúc đẩy nút quyết định chẻ sắc tại mép nước/bãi cát.
 
-### B. Reach 2 & 3 (Middle/Lower Reaches - Hanoi Urban & Agricultural plains)
-* **Model Class**: `ee.Classifier.smileRandomForest`
-* **Target Area**: km 57.28 to km 171.84 (Embanked urban channels and agricultural plains).
-* **Classifier Configuration (Sequentially Tuned)**:
-  * `numberOfTrees`: 300
-  * `variablesPerSplit`: 3
-  * `bagFraction`: 0.5
-  * `seed`: 42
-* **Feature Stack**:
-  * Polarizations: `VV`, `VH`
-  * Arithmetic Bands: `VV_ratio`, `VV_sum`, `VV_mean`
-  * Textures (7x7 GLCM): `VV_contrast`, `VV_entropy`, `VV_homogeneity`, `VV_correlation`, `VV_ASM`, `VV_variance` (and equivalent VH texture bands).
-  * **Topography Removed**: HAND and SRTM Slope are excluded to speed up export/classification times by **45%** without sacrificing accuracy in flat terrain.
-* **Training Strategy**:
-  * Trained on prepared training polygons (`aoi/training_polygons.geojson`) using 70/30 polygon-level splits to avoid spatial correlation leakage.
+### B. Reach 2 (Trung lưu - Nội đô Hà Nội)
+* **Tọa độ / Đoạn sông**: km 57.28 đến km 112.50 (Hành lang đô thị kè đê chắc chắn, có 6 cây cầu lớn bắc qua).
+* **Cấu hình Classifier**:
+  * Mô hình: `ee.Classifier.smileRandomForest(numberOfTrees=200)`
+* **Thuật toán Bridge Piercing & Island Buffer Overlay**:
+  * Tạo capsule đệm tự động kết nối hai bờ gầm cầu (Nhật Tân, Thăng Long, Long Biên, Chương Dương, Vĩnh Tuy, Thanh Trì).
+  * Lớp phủ buffer cồn cát lọc chính xác bãi nổi ngập/nổi theo mùa.
+
+### C. Reach 3 (Hạ lưu - Phú Xuyên / Thường Tín / Thanh Trì)
+* **Tọa độ / Đoạn sông**: km 112.50 đến km 171.84 (Đồng bằng nông nghiệp meander uốn lượn).
+* **Cấu hình Classifier**:
+  * Mô hình: `ee.Classifier.smileRandomForest(numberOfTrees=200)`
+* **Đặc tính vượt trội**:
+  * Loại bỏ yếu tố HAND/Slope giúp giảm 45% thời gian tính toán GEE.
+  * Khống chế sai số vị trí ở mức lý tưởng: **RMSE Mùa khô $18.72\text{m}$ ($< 2.0\text{ pixels}$)** & **Mùa mưa $25.72\text{m}$ ($< 3.0\text{ pixels}$)**.
 
 ---
 
-## 3. Shoreline Extraction & Post-Processing (Phases 5-7)
+## 3. Thuật Toán Hậu Xử Lý Hình Thái Học & Đơn Giản Hóa (Phases 5–7)
 
-Once the classification water probability map is generated, it undergoes local geometric cleaning:
-
-1. **Boundary Threshold Calibration**:
-   * Boundary points are extracted along the Sentinel-2 reference shoreline.
-   * Sentinel-1 backscatter thresholds are dynamically calibrated against these points (e.g., `VV = -13.00 dB`, `VH = -19.00 dB`).
-2. **Morphological Filters**:
-   * Small isolated noise is removed: `remove_small_objects < 20px`.
-   * Small interior holes in sandbars are filled: `remove_small_holes < 100px`.
-3. **Active Channel Buffer Constraints**:
-   * Water polygons are filtered using a **150m spatial buffer** around the Sentinel-2 NDWI reference shoreline.
-   * Eliminates side-channel jumping, inland lakes, and false-positive tributary segments.
-4. **Douglas-Peucker & B-Spline Smoothing**:
-   * Vertices are simplified with a maximum deviation tolerance of **15.0 m** (Hausdorff deviation achieved is typically ~11.0m, with a **~73% vertex reduction**).
+1. **Toán tử Lọc Hình Thái Học (Morphological Filters)**:
+   - Majority Filter: `focalMode(radius=1.5, kernelType='square')`.
+   - Lọc nhiễu đối tượng nhỏ: `remove_small_objects < 20px`.
+   - Lấp lỗ rỗng cồn cát: `remove_small_holes < 100px`.
+2. **Khống chế Lòng dẫn Hoạt động (Active Channel Buffer Constraints 150m)**:
+   - Ràng buộc polygon mặt nước nằm trong khoảng đệm **150m** xung quanh đường bờ tham chiếu Sentinel-2 NDWI.
+   - Loại bỏ hoàn toàn nhiễu ao hồ nội địa và kênh nhánh nông.
+3. **Đơn giản hóa Đỉnh & Làm mịn (Douglas-Peucker & B-Spline Smoothing)**:
+   - Giảm số lượng đỉnh từ ~73% đến 80% với ngưỡng sai lệch tối đa `tolerance = 15.0m` (Hausdorff deviation đạt thực tế ~10.8m - 12.7m).
 
 ---
 
-## 4. Execution Guidelines & Workflow Scripts
+## 4. Hướng Dẫn Thực Thi Mã Nguồn
 
-The pipeline requires running the following scripts in order to cache reference data, train classifiers, and execute the final hybrid shoreline extraction:
-
-### 4.1 Python Scripts Overview
-
-1. **Reference Data (Pre-computed)**:
-   * **Purpose**: All Sentinel-2 reference shorelines (`s2_ref_shoreline`) and water polygons (`water_poly`) have already been downloaded and cached locally.
-   * **Location**: These files are located in the `data/` directory. This setup skips redundant downloads, speeds up validation phases, and prevents GEE timeouts.
-   
-2. **`scripts/train_classifier.py`**:
-   * **Purpose**: Tunes, trains, and evaluates the global 4-class Random Forest model (Water, Sand, Built-up, Vegetation) over the AOI.
-   * **Outputs**: Generates accuracy metrics reports (`outputs/rf_metrics_{year}_{season}.txt`) and interactive HTML maps.
-
-3. **`scripts/extract_research_shoreline.py`**:
-   * **Purpose**: Dedicated pipeline script for **Reach 2 & 3** using a single standard Global Random Forest model without custom bridge polygon interventions.
-   * **Workflow**: Processes Reach 2 & 3 as a single continuous corridor using native 20m scale and exports final GeoJSONs and reports.
-
-4. **`scratch/run_reach1_final_execution.py`**:
-   * **Purpose**: Dedicated advanced execution and validation script specifically tailored for **Reach 1 (Upper Reach)**. Includes Otsu 4-class segmentation, Hard-Negative Boundary Mining, Topographic Integration (HAND/Slope), and customized spatial post-processing.
-   * **Note**: In future runs, **`scratch/run_reach1_final_execution.py`** should be used exclusively when performing Reach 1 Local RF classification and validation.
-
----
-
-### 4.2 Execution Steps (10-Year Composite Loop)
-
-To run the full pipeline for all composites across a 10-year period (e.g., 2015-2024), you must run both Reach 1 and Reach 2&3 scripts separately for each year.
-
-#### Step 1: Execute Reach 1 (Upper Reach)
-Reach 1 uses a highly optimized local Random Forest model featuring Otsu 4-class segmentation, Hard-Negative Boundary Mining, Topographic Integration (HAND & Slope), and strict active channel buffering.
+Hệ thống được vận hành đơn giản thông qua file [main.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/main.py):
 
 ```bash
-# Run the advanced pipeline for Reach 1
-python scratch/run_reach1_final_execution.py
+# 🟢 1. Chạy toàn bộ Reach 1, 2, 3 + Tạo Master Hybrid Map:
+python main.py --reach all
+
+# 🟢 2. Chạy riêng từng Reach (Ví dụ Reach 1):
+python main.py --reach 1
+
+# 🟢 3. Trích xuất chuỗi thời gian 10 năm (2017-2026):
+python main.py --full-composite
 ```
-> [!NOTE]
-> `run_reach1_final_execution.py` currently hardcodes the evaluation year inside the script. You will need to parameterize the `year` argument inside its `main()` function to support looping.
-
-#### Step 2: Execute Reach 2 & 3 (Middle/Lower Reaches)
-Reach 2 & 3 uses the finetuned global Random Forest model.
-
-```bash
-# Run the global pipeline for Reach 2 & 3 for a specific year
-python scripts/extract_research_shoreline.py --year 2024
-```
-
-#### Step 3: Loop for 10-Year Monitoring
-Once both scripts are parameterized, you can process the entire 10-year monitoring period using a simple loop:
-
-```powershell
-# PowerShell example for processing 2015-2024
-for ($year=2015; $year -le 2024; $year++) {
-    Write-Host "Processing Year: $year"
-    
-    # 1. Process Reach 2 & 3
-    python scripts/extract_research_shoreline.py --year $year
-    
-    # 2. Process Reach 1
-    python scratch/run_reach1_final_execution.py --year $year
-}
-```
-
----
-
-### 4.3 Output Statistics Instructions
-
-During execution, `scripts/extract_research_shoreline.py` and `scratch/run_reach1_final_execution.py` automatically generate validation statistics and markdown files:
-* **Output Path**: `config/{year}_dry_stats.md` and `config/{year}_wet_stats.md` (and dedicated reports in `outputs/` or `docs/`)
-* **Contents Logged**:
-  * **Runtime Information**: Execution date, start/end time, and total runtime duration.
-  * **Model Details**: Model parameters (trees, variables per split) and feature sets.
-  * **Accuracy Parameters**: Overall RMSE, Mean/Median errors, Hausdorff distance, P95 metrics, and reach-wise breakdowns.
-
