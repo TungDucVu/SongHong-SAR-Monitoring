@@ -1,0 +1,13 @@
+# GitHub Linguist Configuration: Exclude generated HTML maps from repository language statistics
+# This forces GitHub to display Python as the primary language (90%+) instead of HTML.
+
+*.html linguist-generated=true
+outputs/map/*.html linguist-vendored
+outputs/REPORT/*.html linguist-vendored
+outputs/others/*.html linguist-vendored
+
+# Explicitly ensure Python scripts are highlighted as primary code
+main.py linguist-detectable=true
+src/*.py linguist-detectable=true
+main_workflow/*.py linguist-detectable=true
+scripts/*.py linguist-detectable=true
