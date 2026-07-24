@@ -17,7 +17,7 @@ from src.config import (
     CLASSIFIER_FEATURES, PROJECT_ROOT
 )
 
-PHASE2_OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'shoreline_extraction', 'phase2_feature_engineering', 'outputs')
+PHASE2_OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'outputs', 'others')
 os.makedirs(PHASE2_OUTPUT_DIR, exist_ok=True)
 
 
