@@ -1,0 +1,308 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- PACKAGES ---
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.5cm}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{microtype}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    citecolor=blue!70!black,
+    urlcolor=blue!70!black
+}
+
+% --- TITLE & AUTHOR ---
+\title{\textbf{\LARGE BÁO CÁO PHÂN TÍCH KHOA HỌC}\\[0.3em]
+\Large GIÁM SÁT BIẾN ĐỘNG ĐƯỜNG BỜ VÀ BÃI BỒI SÔNG HỒNG TẠI HÀ NỘI BẰNG DỮ LIỆU VỆ TINH SENTINEL-1 SAR (2017 -- 2026)}
+
+\author{\textbf{Vũ Đức Tùng}\\[0.2em]
+\small \textit{Trung tâm Vũ trụ Việt Nam (VNSC)}}
+
+\date{\small Tháng 7 năm 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Nghiên cứu này trình bày kết quả \textbf{thử nghiệm định lượng định hình mô hình (Pilot Baseline) trên bộ dữ liệu đại diện năm 2024} và thiết lập quy trình viễn thám radar khẩu độ tổng hợp (SAR) bán tự động nhằm giám sát biến động đường bờ và bãi bồi sông Hồng đoạn qua Hà Nội (chiều dài $171.84~\text{km}$, diện tích hành lang $362.83~\text{km}^2$). Quy trình tích hợp bộ lọc đốm thích ứng Refined Lee $7\times7$, trích xuất 17 đặc trưng radar/kết cấu (GLCM), mô hình phân loại Random Forest theo phân đoạn địa lý (Local Reaches) và thuật toán loại bỏ nhiễu cầu dựa trên đường tim sông (Centerline Connector). Thẩm định thử nghiệm năm 2024 với dữ liệu chuẩn Sentinel-2 NDWI bằng cấu trúc cây KD-Tree ghi nhận sai số vị trí trung vị (Median Error) toàn sông đạt \textbf{$16.59~\text{m}$} trong mùa khô và \textbf{$20.45~\text{m}$} trong mùa mưa. Riêng phân đoạn Hạ lưu (Reach 3) đạt độ chính xác lý tưởng \textbf{$6.16~\text{m}$} ($< 1~\text{pixel}$). Tỷ lệ đường bờ SAR nằm trong khoảng đệm $100~\text{m}$ so với quang học đạt \textbf{$95.75\%$}. Ngay sau công đoạn thử nghiệm này, hệ thống sẽ tiến hành \textbf{khởi chạy tự động pipeline trên toàn bộ chuỗi thời gian 10 năm (2017--2026)} với 317 cảnh ảnh Sentinel-1 SAR để phục vụ phân tích biến động hình thái dài hạn theo timeline.
+\end{abstract}
+
+\hrule
+\vspace{1em}
+
+% -------------------------------------------------------------
+\section{TÍNH CẤP THIẾT CỦA ĐỀ TÀI}
+% -------------------------------------------------------------
+
+Sông Hồng là hệ thống sông lớn nhất miền Bắc Việt Nam, đóng vai trò sống còn đối với an ninh nguồn nước, nông nghiệp, giao thông thủy và sự phát triển kinh tế -- xã hội của Thủ đô Hà Nội. Đoạn sông Hồng chảy qua địa bàn Hà Nội dài khoảng $171.84~\text{km}$, với các đặc tính thủy văn và hình thái vô cùng phức tạp:
+\begin{itemize}
+    \item \textbf{Dao động lưu lượng lớn theo mùa:} Sự chênh lệch mực nước giữa mùa mưa (tháng 5 -- 10) và mùa khô (tháng 11 -- 4 năm sau) gây ra hiện tượng ngập lụt ven bờ bãi bồi vào mùa lũ và làm lộ ra các bãi cát lớn vào mùa khô.
+    \item \textbf{Tác động từ các công trình thủy điện thượng nguồn:} Việc vận hành xả lũ và tích nước của hệ thống hồ chứa (Hòa Bình, Sơn La, Tuyên Quang, Thác Bà) làm thay đổi quy luật vận chuyển phù sa, gây sạt lở đê kè nghiêm trọng ở một số khu vực và bồi lắng lòng sông ở các khu vực khác.
+    \item \textbf{Áp lực đô thị hóa ven sông:} Việc xây dựng công trình, khai thác cát và san lấp mặt bằng ven sông làm gia tăng rủi ro biến đổi hình thái lòng sông, đe dọa an toàn hành lang thoát lũ và đê điều quốc gia.
+\end{itemize}
+
+\textbf{Thách thức đối với phương pháp quan trắc truyền thống:} Đo đạc địa hình trực tiếp bằng máy toàn đạc hay thủy đạc lòng sông tốn kém chi phí, tốn thời gian và khó triển khai diện rộng trên toàn hành lang sông. Trong khi đó, ảnh vệ tinh quang học (như Sentinel-2, Landsat) gặp hạn chế rất lớn do mây che phủ dày đặc trong mùa mưa bão tại miền Bắc Việt Nam.
+
+\textbf{Ưu thế vượt trội của viễn thám Radar (SAR):} Dữ liệu Radar khẩu độ tổng hợp Sentinel-1 SAR (Băng C) có khả năng đâm xuyên qua mây, mù, sương và hoạt động bất kể ngày đêm. Tín hiệu radar phản xạ cực kỳ nhạy với độ nhám bề mặt và hàm lượng nước: mặt nước phẳng lặng đóng vai trò như gương phản xạ hướng tín hiệu đi xa (cho giá trị phản xạ $\sigma^0$ rất thấp), trong khi bãi bồi, thực vật và công trình xây dựng tán xạ ngược mạnh trở lại vệ tinh. Đây là công cụ hiện đại, tối ưu cho bài toán giám sát liên tục đường bờ và bãi bồi sông Hồng.
+
+% -------------------------------------------------------------
+\section{MỤC TIÊU NGHIÊN CỨU \& LỘ TRÌNH THỰC HIỆN}
+% -------------------------------------------------------------
+
+Nghiên cứu được chia làm hai giai đoạn rõ ràng:
+\begin{enumerate}
+    \item \textbf{Thử nghiệm định lượng trên bộ mẫu đại diện (Giai đoạn hiện tại - Mẫu 2024):} Xây dựng quy trình viễn thám bán tự động, thực hiện kiểm chứng định lượng chính xác vị trí đường bờ SAR so với đường bờ chuẩn Sentinel-2 NDWI năm 2024 làm căn cứ nghiệm thu phương pháp.
+    \item \textbf{Mở rộng tính toán tự động chuỗi thời gian 10 năm (Giai đoạn kế tiếp - 2017--2026):} Khởi chạy tự động pipeline trên toàn bộ 317 cảnh ảnh Sentinel-1 SAR từ năm 2017 đến 2026 trên Google Earth Engine, trích xuất hình thái đường bờ theo từng mùa để phân tích biến động theo timeline 10 năm.
+\end{enumerate}
+
+% -------------------------------------------------------------
+\section{KHU VỰC NGHIÊN CỨU VÀ BỘ DỮ LIỆU}
+% -------------------------------------------------------------
+
+\subsection{Phạm vi Địa lý và Phân đoạn Sông Hồng}
+Phạm vi nghiên cứu (AOI) bao phủ hành lang sông Hồng dài $171.84~\text{km}$ kéo dài từ Sơn Tây đến Phú Xuyên (Hà Nội), với diện tích hành lang đệm rộng $362.83~\text{km}^2$. Toàn bộ chiều dài sông được phân thành 3 Phân đoạn (Reach) có đặc trưng địa lý và thủy văn khác biệt (Bảng \ref{tab:reaches}).
+
+\begin{table}[H]
+\centering
+\caption{Đặc điểm các phân đoạn sông Hồng thuộc phạm vi nghiên cứu.}
+\label{tab:reaches}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lcm{4.5cm}m{6.5cm}}
+\toprule
+\textbf{Phân đoạn Sông} & \textbf{Chiều dài} & \textbf{Phạm vi Hành chính} & \textbf{Đặc điểm Hình thái \& Thủy văn} \\
+\midrule
+\textbf{Reach 1 (Thượng lưu)} & $57.28~\text{km}$ & Sơn Tây / Ba Vì / Phúc Thọ & Lòng sông rộng, bãi bồi biến động mạnh, nhiều nhánh chảy phân chia bãi nổi lớn. Tín hiệu bị ảnh hưởng bởi địa hình đồi núi. \\
+\midrule
+\textbf{Reach 2 (Trung lưu)} & $57.28~\text{km}$ & Nội đô Hà Nội & Đô thị hóa cao, bờ đê kè bê tông kiên cố. Có 6 cầu lớn bắc qua sông gây đứt gãy tín hiệu radar. \\
+\midrule
+\textbf{Reach 3 (Hạ lưu)} & $57.28~\text{km}$ & Thanh Trì / Thường Tín / Phú Xuyên & Vùng đồng bằng nông nghiệp meander nhẹ, độ dốc thấp, bờ sông ổn định, bãi bồi ven sông phát triển. \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Bộ Dữ liệu Vệ tinh}
+\begin{itemize}
+    \item \textbf{Sentinel-1 SAR (Bộ dữ liệu chuỗi thời gian):} 317 cảnh ảnh Sentinel-1 GRD Descending (01/2017 -- 07/2026), phân cực $VV$ và $VH$, phục vụ cho công đoạn tính toán tự động toàn chuỗi tiếp theo (xem Hình \ref{fig:s1_coverage} và Hình \ref{fig:s1_monthly}).
+    \item \textbf{Sentinel-2 Optical (Dữ liệu thử nghiệm 2024):} Ảnh quang học $10~\text{m}$ năm 2024 tính toán chỉ số NDWI ($\text{NDWI} = \frac{Green - NIR}{Green + NIR}$) làm chuẩn kiểm định mặt đất cho bước thử nghiệm định lượng ban đầu.
+    \item \textbf{ESA WorldCover 2021:} Bộ dữ liệu phân loại lớp phủ toàn cầu làm baseline trích mẫu huấn luyện ban đầu.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{figures/fig3_temporal_s1_coverage.png}
+    \caption{Chuỗi Thời gian và Mật độ Dữ liệu Sentinel-1 SAR Descending (Tổng cộng 317 Cảnh ảnh giai đoạn 2017--2026 chuẩn bị cho bước xử lý tự động toàn chuỗi).}
+    \label{fig:s1_coverage}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{figures/fig6_monthly_s1_distribution.png}
+    \caption{Phân bố Cảnh ảnh Sentinel-1 theo Tháng trong Năm với Mã màu Phân chia Mùa Khô (Xanh) vs Mùa Mưa (Cam).}
+    \label{fig:s1_monthly}
+\end{figure}
+
+% -------------------------------------------------------------
+\section{PHƯƠNG PHÁP NGHIÊN CỨU TỔNG QUAN}
+% -------------------------------------------------------------
+
+Quy trình phân tích viễn thám gồm 5 bước chính:
+\begin{enumerate}
+    \item \textbf{Tiền xử lý \& Lọc đốm Refined Lee:} Chuyển đổi dữ liệu về thang đo Power $10^{\text{dB}/10}$, áp dụng bộ lọc thích ứng hướng Refined Lee $7\times7$ trên ảnh Median Composite mùa nhằm triệt tiêu nhiễu đốm mà vẫn giữ nguyên độ sắc nét ranh giới bờ.
+    \item \textbf{Trích xuất 17 Đặc trưng Radar \& GLCM Texture:} Tạo bộ 17 băng đặc trưng gồm $VV, VH$, các tỷ số phân cực ($VV/VH, VV-VH, Mean$), và 6 đặc trưng kết cấu GLCM ($5\times5$) để tách biệt nước và thực vật/bãi cát thô ráp.
+    \item \textbf{Mô hình Random Forest Phân đoạn Local:} Huấn luyện 3 mô hình RF riêng biệt cho 3 Reach nhằm tối ưu hóa ngưỡng quyết định theo đặc tính khu vực.
+    \item \textbf{Thuật toán Nối bờ qua cầu (Centerline Bridge Exclusion):} Tạo capsule đệm kết nối lòng sông dựa trên đường tim sông (centerline), triệt tiêu hoàn toàn nhiễu bóng đứt gãy dưới gầm các cây cầu lớn.
+    \item \textbf{Kiểm định Định lượng Thử nghiệm 2024 (KD-Tree):} Lấy mẫu điểm đường bờ SAR ở khoảng cách $10~\text{m}$ trên bộ dữ liệu mẫu 2024, dùng cấu trúc cây KD-Tree để tính khoảng cách ngắn nhất tới đường bờ chuẩn Sentinel-2 NDWI.
+\end{enumerate}
+
+% -------------------------------------------------------------
+\section{KẾT QUẢ THỬ NGHIỆM ĐỊNH LƯỢNG TRÊN BỘ MẪU 2024}
+% -------------------------------------------------------------
+
+\subsection{Phân tích Tổng quan Độ chính xác Đường bờ theo Mùa (Thử nghiệm 2024)}
+
+Kết quả thẩm định độc lập trên bộ dữ liệu mẫu năm 2024 (sau khi áp dụng thuật toán tối ưu nối bờ qua cầu) thể hiện độ tương thích xuất sắc giữa đường bờ SAR và đường bờ tham chiếu quang học Sentinel-2 (Bảng \ref{tab:overall_stats} và Hình \ref{fig:error_cdf}).
+
+\begin{table}[H]
+\centering
+\caption{Thống kê sai số khoảng cách đường bờ thử nghiệm năm 2024 (Đơn vị: mét).}
+\label{tab:overall_stats}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lccc}
+\toprule
+\textbf{Chỉ số Thống kê (Metric)} & \textbf{Mùa Khô 2024 (Dry)} & \textbf{Mùa Mưa 2024 (Wet)} & \textbf{Ý nghĩa Khoa học \& Thủy văn} \\
+\midrule
+\textbf{Minimum Error} & $0.003~\text{m}$ & $0.002~\text{m}$ & Trùng khớp tuyệt đối tại các đoạn đê kè bê tông. \\
+\textbf{Median Error (P50)} & \textbf{$16.59~\text{m}$} & \textbf{$20.45~\text{m}$} & \textbf{Sai số trung vị cực thấp ($\approx 1.5 - 2$ pixel).} \\
+\textbf{Mean Error} & $24.67~\text{m}$ & $33.26~\text{m}$ & Trung bình sai số toàn hành lang sông. \\
+\textbf{RMSE} & \textbf{$41.99~\text{m}$} & \textbf{$54.47~\text{m}$} & Độ lệch chuẩn tổng thể phản ánh mức tập trung sai số. \\
+\textbf{75th Percentile (P75)} & $29.43~\text{m}$ & $39.74~\text{m}$ & $75\%$ đường bờ có sai số $< 3$ pixels. \\
+\textbf{95th Percentile (P95)} & \textbf{$89.82~\text{m}$} & \textbf{$122.91~\text{m}$} & Sai số lớn tập trung tại bãi bồi động. \\
+\textbf{Hausdorff Distance (Max)} & $354.25~\text{m}$ & $376.48~\text{m}$ & Sai số ngoại lệ do lệch ngày chụp ảnh S1/S2. \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.88\textwidth]{figures/fig4_error_cdf_percentiles.png}
+    \caption{Đường cong Phân bố Xác suất Tích lũy (CDF) Sai số Vị trí Đường bờ (Thử nghiệm 2024).}
+    \label{fig:error_cdf}
+\end{figure}
+
+\subsection{Phân tích Độ chính xác Theo Phân đoạn Sông (Mẫu 2024)}
+
+Đặc tính địa hình và công trình nhân tạo tạo ra sự khác biệt lớn về sai số giữa các phân đoạn sông (Hình \ref{fig:reach_comparison}, Bảng \ref{tab:reach_stats} và Hình \ref{fig:reach_metrics}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{figures/fig1_reach_error_comparison.png}
+    \caption{So sánh Sai số Vị trí Đường bờ SAR theo Phân đoạn Sông Hồng (Thử nghiệm 2024).}
+    \label{fig:reach_comparison}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Thống kê sai số chi tiết theo từng Phân đoạn Sông thử nghiệm năm 2024.}
+\label{tab:reach_stats}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Phân đoạn Sông} & \textbf{Số điểm mẫu} & \textbf{Median (m)} & \textbf{Mean (m)} & \textbf{RMSE (m)} & \textbf{P95 (m)} & \textbf{Hausdorff (m)} \\
+\midrule
+Reach 1 (Upper - Mùa Khô) & 12,169 & 19.96 & 31.52 & 47.02 & 117.86 & 189.64 \\
+Reach 1 (Upper - Mùa Mưa) & 11,830 & 23.62 & 37.95 & 57.78 & 128.60 & 266.19 \\
+\midrule
+Reach 2 (Middle - Mùa Khô) & 20,223 & 19.77 & 29.10 & 49.38 & 105.98 & 354.25 \\
+Reach 2 (Middle - Mùa Mưa) & 21,714 & 26.32 & 40.88 & 64.12 & 147.24 & 376.48 \\
+\midrule
+Reach 3 (Lower - Mùa Khô) & 13,798 & \textbf{6.16} & \textbf{12.14} & \textbf{19.49} & \textbf{37.75} & \textbf{170.77} \\
+Reach 3 (Lower - Mùa Mưa) & 14,011 & \textbf{7.25} & \textbf{17.49} & \textbf{29.68} & \textbf{54.50} & \textbf{193.10} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{figures/fig7_reach_accuracy_metrics.png}
+    \caption{Biểu đồ Phân tích Hồ sơ Sai số Chi tiết (Median, Mean, RMSE, P95, Hausdorff) giữa 3 Phân đoạn Sông.}
+    \label{fig:reach_metrics}
+\end{figure}
+
+\subsection{Đánh giá Tỷ lệ Trùng khớp theo Vùng đệm (Thử nghiệm 2024)}
+
+Tỷ lệ đường bờ SAR nằm trong các khoảng đệm kiểm chứng năm 2024 được thể hiện trên Hình \ref{fig:buffer_curve} và Bảng \ref{tab:buffer_stats}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.88\textwidth]{figures/fig2_buffer_accuracy_curve.png}
+    \caption{Đường cong Tỷ lệ Đường bờ trùng khớp theo Khoảng đệm (Thử nghiệm 2024).}
+    \label{fig:buffer_curve}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Tỷ lệ trùng khớp đường bờ trong các khoảng đệm thử nghiệm năm 2024 (\%).}
+\label{tab:buffer_stats}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{ccc}
+\toprule
+\textbf{Khoảng đệm (Buffer Distance)} & \textbf{Mùa Khô 2024 (Dry Season)} & \textbf{Mùa Mưa 2024 (Wet Season)} \\
+\midrule
+$\le 10~\text{m}$ (1 pixel) & \textbf{40.46\%} & 34.02\% \\
+$\le 20~\text{m}$ (2 pixels) & \textbf{57.96\%} & 45.65\% \\
+$\le 30~\text{m}$ (3 pixels) & \textbf{75.67\%} & 63.62\% \\
+$\le 50~\text{m}$ (5 pixels) & \textbf{88.87\%} & \textbf{82.57\%} \\
+$\le 75~\text{m}$ & \textbf{93.70\%} & \textbf{89.30\%} \\
+$\le 100~\text{m}$ & \textbf{95.75\%} & \textbf{92.60\%} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Động lực học Biến động Diện tích Mặt nước và Bãi bồi (Mẫu 2024)}
+
+Sự thay đổi diện tích giữa mùa khô và mùa mưa năm thử nghiệm 2024 thể hiện trên Bảng \ref{tab:area_dynamics}, Hình \ref{fig:water_sand_dynamics} và Hình \ref{fig:submergence}.
+
+\begin{table}[H]
+\centering
+\caption{Thống kê diện tích bãi bồi và mặt nước thử nghiệm năm 2024 ($km^2$).}
+\label{tab:area_dynamics}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Phân đoạn Sông} & \textbf{Nước Khô} & \textbf{Nước Mưa} & \textbf{Tăng Nước (\%)} & \textbf{Bãi Khô} & \textbf{Bãi Mưa} & \textbf{Giảm Bãi (\%)} \\
+\midrule
+Reach 1 (Thượng lưu) & $38.50$ & $54.20$ & \textbf{+40.78\%} & $28.40$ & $9.10$ & \textbf{-67.96\%} \\
+Reach 2 (Trung lưu)  & $42.10$ & $58.70$ & \textbf{+39.43\%} & $15.20$ & $4.30$ & \textbf{-71.71\%} \\
+Reach 3 (Hạ lưu)    & $35.80$ & $48.30$ & \textbf{+34.92\%} & $18.90$ & $5.60$ & \textbf{-70.37\%} \\
+\midrule
+\textbf{TỔNG CỘNG} & \textbf{116.40} & \textbf{161.20} & \textbf{+38.49\%} & \textbf{62.50} & \textbf{19.00} & \textbf{-69.60\%} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\paragraph{Phương pháp tính toán và công thức diện tích:}
+\begin{enumerate}
+    \item \textbf{Nguồn dữ liệu tính toán diện tích:} Tổng hợp trực tiếp bằng cách đếm số lượng pixel của lớp \textit{Mặt nước (Water - Lớp 1)} và lớp \textit{Bãi bồi/Cát (Sand - Lớp 2)} từ kết quả phân loại mô hình Random Forest (độ phân giải $10\text{m}$), được cắt chi tiết theo ranh giới vùng đệm 3 Phân đoạn sông (\texttt{aoi\_reach1.geojson}, \texttt{aoi\_reach2.geojson}, \texttt{aoi\_reach3.geojson}).
+    \item \textbf{Công thức tính Tăng trưởng Mặt nước (\%):}
+    \begin{equation}
+        \% \text{Tăng mặt nước} = \frac{\text{Diện tích Nước Mùa Mưa} - \text{Diện tích Nước Mùa Khô}}{\text{Diện tích Nước Mùa Khô}} \times 100\%
+    \end{equation}
+    Ví dụ tổng toàn sông: $\frac{161.20 - 116.40}{116.40} \times 100\% = +38.49\%$.
+    \item \textbf{Công thức tính Suy giảm Bãi nổi (\%):}
+    \begin{equation}
+        \% \text{Suy giảm bãi nổi} = \frac{\text{Diện tích Bãi Mùa Mưa} - \text{Diện tích Bãi Mùa Khô}}{\text{Diện tích Bãi Mùa Khô}} \times 100\%
+    \end{equation}
+    Ví dụ tổng toàn sông: $\frac{19.00 - 62.50}{62.50} \times 100\% = -69.60\%$.
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{figures/fig5_water_sand_area_dynamics.png}
+    \caption{So sánh Động lực học Diện tích Mặt nước và Bãi bồi giữa Mùa Khô và Mùa Mưa (Thử nghiệm 2024).}
+    \label{fig:water_sand_dynamics}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{figures/fig8_sandbar_submergence_rate.png}
+    \caption{Biểu đồ Tỷ lệ Ngập và Diện tích Bãi bồi Mùa Khô vs Mùa Mưa theo Phân đoạn Sông.}
+    \label{fig:submergence}
+\end{figure}
+
+% -------------------------------------------------------------
+\section{KẾ HOẠCH KẾ TIẾP \& KIẾN NGHỊ}
+% -------------------------------------------------------------
+
+\subsection{Kế hoạch Khởi chạy Tự động Chuỗi Thời gian (2017--2026 Timeline)}
+Sau khi hoàn thành thử nghiệm định lượng trên mẫu 2024, công đoạn tiếp theo bao gồm:
+\begin{enumerate}
+    \item Khởi chạy tự động pipeline trên Google Earth Engine xử lý toàn bộ 317 cảnh ảnh Sentinel-1 SAR (2017--2026).
+    \item Trích xuất đường bờ chuỗi 10 năm và tiến hành phân tích biến động hình thái theo timeline (sử dụng các chỉ số NSM, EPR và DSAS).
+\end{enumerate}
+
+\subsection{Kiến nghị Ứng dụng}
+\begin{itemize}
+    \item \textbf{Cảnh báo sớm xói lở đê điều:} Khai thác bản đồ ranh giới đường bờ SAR mùa khô hàng năm để phát hiện các bãi bồi mới nổi làm hẹp lòng dẫn và chuyển hướng dòng chảy.
+    \item \textbf{Giám sát khai thác cát:} Theo dõi biến động bất thường diện tích bãi bồi theo tháng để hỗ trợ thanh tra khai thác cát trái phép.
+    \item \textbf{Quy hoạch không gian sông Hồng:} Dữ liệu phân bố bãi nổi ổn định theo chuỗi thời gian 10 năm làm cơ sở đầu vào cho Đề án Quy hoạch Phân khu Đô thị Sông Hồng.
+\end{itemize}
+
+\end{document}
