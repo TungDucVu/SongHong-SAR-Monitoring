@@ -24,10 +24,10 @@ Hệ thống thiết lập một quy trình viễn thám bán tự động trên
 > [!IMPORTANT]
 > **Lưu ý:** Tất cả các kết quả thống kê định lượng hiện tại đại diện cho **bước nghiệm thu thử nghiệm định hình mô hình trên bộ mẫu năm 2024**. Công đoạn kế tiếp sẽ khởi chạy tự động toàn chuỗi 10 năm (2017–2026).
 
-### 1. Đánh giá Sai số Vị trí Đường bờ năm 2024
-* **Sai số Trung vị toàn sông (Median P50):** Đạt **$16.59\text{ m}$** (Mùa khô) và **$20.45\text{ m}$** (Mùa mưa) — tiệm cận mức sai số $1.5 - 2\text{ pixel}$ ($10\text{m}$).
-* **Độ chính xác cao nhất tại Reach 3 (Hạ lưu - Phú Xuyên):** Sai số trung vị đạt mức lý tưởng **$6.16\text{ m}$** trong mùa khô ($< 1\text{ pixel}$) và RMSE $19.49\text{ m}$.
-* **Tỷ lệ trùng khớp Vùng đệm (Buffer Agreement):** Đạt **$88.87\%$** trong khoảng đệm $50\text{ m}$ và **$95.75\%$** trong khoảng đệm $100\text{ m}$ (Mùa khô 2024).
+### 1. Đánh giá Sai số Vị trí Đường bờ năm 2024 (Tối ưu Option A)
+* **Sai số Trung vị toàn sông (Median P50):** Đạt **$14.10\text{ m}$** (Mùa khô) và **$18.47\text{ m}$** (Mùa mưa) — tiệm cận mức sai số $1.5\text{ pixel}$ ($10\text{m}$).
+* **Độ chính xác cao nhất tại Reach 3 (Hạ lưu - Phú Xuyên):** Sai số trung vị đạt mức lý tưởng **$6.16\text{ m}$** trong mùa khô ($< 1\text{ pixel}$), RMSE **$18.72\text{ m}$** (Dry) và **$25.72\text{ m}$** (Wet).
+* **Tỷ lệ trùng khớp Vùng đệm (Buffer Agreement):** Đạt **$91.24\%$** trong khoảng đệm $50\text{ m}$ và **$97.10\%$** trong khoảng đệm $100\text{ m}$ (Mùa khô 2024).
 
 ![Hình 1: So sánh Sai số Vị trí Đường bờ theo Phân đoạn Sông Hồng](./REPORT/figures/fig1_reach_error_comparison.png)
 

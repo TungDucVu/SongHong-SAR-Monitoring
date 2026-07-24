@@ -153,16 +153,16 @@ Kết quả kiểm chứng độc lập trên bộ dữ liệu mẫu năm 2024 (
 
 ![Hình 1: Đánh giá Sai số Vị trí Đường bờ SAR theo Phân đoạn Sông Hồng (Thử nghiệm 2024)](./figures/fig1_reach_error_comparison.png)
 
-#### Bảng 2: So sánh sai số chi tiết giữa các Phân đoạn Sông (Thử nghiệm năm 2024)
+#### Bảng 2: So sánh sai số chi tiết giữa các Phân đoạn Sông (Kết quả Tối ưu Option A - 2024)
 
-| Phân đoạn Sông | Số điểm mẫu | Median Error (m) | Mean Error (m) | RMSE (m) | P95 Error (m) | Hausdorff (m) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Reach 1 (Upper - Mùa Khô)** | 12,169 | 19.96 | 31.52 | 47.02 | 117.86 | 189.64 |
-| **Reach 1 (Upper - Mùa Mưa)** | 11,830 | 23.62 | 37.95 | 57.78 | 128.60 | 266.19 |
-| **Reach 2 (Middle - Mùa Khô)**| 20,223 | 19.77 | 29.10 | 49.38 | 105.98 | 354.25 |
-| **Reach 2 (Middle - Mùa Mưa)**| 21,714 | 26.32 | 40.88 | 64.12 | 147.24 | 376.48 |
-| **Reach 3 (Lower - Mùa Khô)** | 13,798 | **6.16** | **12.14** | **19.49** | **37.75** | **170.77** |
-| **Reach 3 (Lower - Mùa Mưa)** | 14,011 | **7.25** | **17.49** | **29.68** | **54.50** | **193.10** |
+| Phân đoạn Sông | Số điểm mẫu | Median Error (m) | Mean Error (m) | RMSE (m) | P95 Error (m) | Hausdorff (m) | Đánh giá Mức độ |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Reach 1 (Upper - Mùa Khô)** | 12,169 | 19.96 | 32.41 | **48.82** | 128.45 | 370.41 | 🟡 **Trung bình** |
+| **Reach 1 (Upper - Mùa Mưa)** | 11,830 | 22.15 | 31.11 | **54.24** | 149.68 | 372.05 | 🟡 **Trung bình** |
+| **Reach 2 (Middle - Mùa Khô)**| 20,223 | 16.20 | 23.51 | **35.98** | 76.84 | 202.38 | 🟡 **Tiệm cận Tốt** |
+| **Reach 2 (Middle - Mùa Mưa)**| 21,714 | 19.80 | 26.87 | **44.74** | 124.52 | 302.53 | 🟡 **Trung bình** |
+| **Reach 3 (Lower - Mùa Khô)** | 13,798 | **6.16** | **10.15** | **18.72** | **34.12** | **230.53** | 🟢 **Tốt ($<2\text{ px}$)** |
+| **Reach 3 (Lower - Mùa Mưa)** | 14,011 | **7.25** | **13.43** | **25.72** | **44.26** | **231.97** | 🟢 **Tốt ($<3\text{ px}$)** |
 
 ![Hình 7: Biểu đồ Phân tích Hồ sơ Sai số Chi tiết giữa 3 Phân đoạn Sông (Log Scale)](./figures/fig7_reach_accuracy_metrics.png)
 

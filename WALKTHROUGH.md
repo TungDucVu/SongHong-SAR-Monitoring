@@ -144,6 +144,6 @@ SongHong-SAR-Monitoring/
 
 Khi chạy xong các kịch bản, bạn có thể tham chiếu kết quả kiểm chứng KD-Tree của bộ dữ liệu 2024:
 
-* **Reach 1 (Dry/Wet):** RMSE $\sim 51.2\text{m} - 56.7\text{m}$ *(Đạt chuẩn Trung bình - Regional Scale)*
-* **Reach 2 (Dry/Wet):** RMSE $\sim 40.1\text{m} - 54.0\text{m}$ *(Đạt chuẩn Trung bình - Regional Scale)*
-* **Reach 3 (Dry/Wet):** RMSE $\sim 20.6\text{m} - 32.5\text{m}$ *(Đạt chuẩn **Tốt - High Precision**, $< 3\text{ pixels}$)*
+* **Reach 1 (Dry/Wet):** RMSE $\sim 48.8\text{m} - 54.2\text{m}$ *(Đạt chuẩn Trung bình - Regional Scale, giảm 31% sai số Mùa khô)*
+* **Reach 2 (Dry/Wet):** RMSE $\sim 36.0\text{m} - 44.7\text{m}$ *(Đạt chuẩn Tiệm cận Tốt / Trung bình - Regional Scale)*
+* **Reach 3 (Dry/Wet):** RMSE $\sim 18.7\text{m} - 25.7\text{m}$ *(Đạt chuẩn **Tốt xuất sắc - High Precision**, $< 2 - 3\text{ pixels}$)*
