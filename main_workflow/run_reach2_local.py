@@ -124,7 +124,7 @@ def run_pipeline_for_reach2(year=2024, season='dry'):
     cleaned_gdf = clean_shoreline_graph(raw_gdf)
     smoothed_gdf, smooth_metrics = smooth_and_simplify_shoreline(cleaned_gdf)
     
-    output_dir = "outputs"
+    output_dir = os.path.join("outputs", "others")
     os.makedirs(output_dir, exist_ok=True)
     
     out_s1_path = os.path.join(output_dir, f"reach2_s1_shoreline_{year}_{season}.geojson")

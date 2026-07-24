@@ -15,7 +15,7 @@ def plot_hybrid_map(year, season, output_path):
         control=True
     ).add_to(m)
     
-    OUTPUT_DIR = "outputs"
+    OUTPUT_DIR = os.path.join("outputs", "others")
     
     # Load Reach 1 data
     reach1_s1_path = os.path.join(OUTPUT_DIR, f"reach1_s1_shoreline_{year}_{season}.geojson")
