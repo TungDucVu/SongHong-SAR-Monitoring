@@ -94,9 +94,3 @@ Mở bản báo cáo phân tích khoa học chi tiết kèm biểu đồ trực 
 
 ---
 
-
-
-### 🔹 4. Short Paper / Report Abstract Subtitle (Tiêu đề phụ Báo cáo/Bài báo)
-> **English:** *Seasonal Dynamics of Shoreline Migration and Sandbar Morphodynamics in the Red River (Hanoi Corridor) Derived from Sentinel-1 SAR and Sentinel-2 Multi-Temporal Composites (2017–2026).*
->
-> **Tiếng Việt:** *Động Lực Học Biến Động Đường Bờ Và Bãi Bồi Sông Hồng Đoạn Qua Hà Nội Từ Ảnh Vệ Tinh Sentinel-1 SAR Và Sentinel-2 Chuỗi Thời Gian (2017–2026).*

@@ -6,12 +6,7 @@
 *.html linguist-vendored=true
 
 # Ignore large GeoJSON datasets, JSON, and CSV outputs
-*.geojson linguist-generated=true
-*.geojson linguist-vendored=true
-*.json linguist-generated=true
-*.json linguist-vendored=true
-*.csv linguist-generated=true
-*.csv linguist-vendored=true
+
 
 # Mark LaTeX scientific paper as documentation
 *.tex linguist-documentation=true
