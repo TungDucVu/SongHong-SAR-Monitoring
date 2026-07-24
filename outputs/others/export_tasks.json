@@ -1,0 +1,122 @@
+[
+  {
+    "year": 2017,
+    "season": "dry",
+    "task_id": "ZXV5YEGYJ4F4HLI6FXKYRPIJ",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2017_dry"
+  },
+  {
+    "year": 2017,
+    "season": "wet",
+    "task_id": "7UZETDMBTKLRRHWZXNOEXXYN",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2017_wet"
+  },
+  {
+    "year": 2018,
+    "season": "dry",
+    "task_id": "7GMLQYEEZV2G7BS3CJPCMWMT",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2018_dry"
+  },
+  {
+    "year": 2018,
+    "season": "wet",
+    "task_id": "4YYSM5Z545I4O4EJV6H6X53C",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2018_wet"
+  },
+  {
+    "year": 2019,
+    "season": "dry",
+    "task_id": "5K4BVFWQLLMNLS4AFWOGBNOP",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2019_dry"
+  },
+  {
+    "year": 2019,
+    "season": "wet",
+    "task_id": "YR3WBNJZAOFBNVHL7ZU374TJ",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2019_wet"
+  },
+  {
+    "year": 2020,
+    "season": "dry",
+    "task_id": "HYHKT52TZELLOS7765R5OEYM",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2020_dry"
+  },
+  {
+    "year": 2020,
+    "season": "wet",
+    "task_id": "MBETDKEOSUP6RATOP6KNZCTT",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2020_wet"
+  },
+  {
+    "year": 2021,
+    "season": "dry",
+    "task_id": "KA3XNZ6SMJ3FDFQNNCPSAB3Q",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2021_dry"
+  },
+  {
+    "year": 2021,
+    "season": "wet",
+    "task_id": "3TAEZYHW7DD3DMXBN3FSFSTC",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2021_wet"
+  },
+  {
+    "year": 2022,
+    "season": "dry",
+    "task_id": "NRK3X2BM7PSL6SG2C4WH3A3P",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2022_dry"
+  },
+  {
+    "year": 2022,
+    "season": "wet",
+    "task_id": "JUCJ3DCQNS5MEA643K2TDCSV",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2022_wet"
+  },
+  {
+    "year": 2023,
+    "season": "dry",
+    "task_id": "RDSBDJMTAJUMWCUL7CA7M6UE",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2023_dry"
+  },
+  {
+    "year": 2023,
+    "season": "wet",
+    "task_id": "6OBTJW5ABR44UGOBPQGH46QH",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2023_wet"
+  },
+  {
+    "year": 2024,
+    "season": "dry",
+    "task_id": "OR6GNGODD7FBC42CH44AEXMI",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2024_dry"
+  },
+  {
+    "year": 2024,
+    "season": "wet",
+    "task_id": "BLIP62PHTYU3HJ3RBZC3YAKA",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2024_wet"
+  },
+  {
+    "year": 2025,
+    "season": "dry",
+    "task_id": "LCVFJV77KGMW3ZTO7M4TR32J",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2025_dry"
+  },
+  {
+    "year": 2025,
+    "season": "wet",
+    "task_id": "OQ7WS5PRYQBQGJR6VG6NFAN3",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2025_wet"
+  },
+  {
+    "year": 2026,
+    "season": "dry",
+    "task_id": "E7MGOIUWUPRDOLJRX3V5VK5B",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2026_dry"
+  },
+  {
+    "year": 2026,
+    "season": "wet",
+    "task_id": "DA5REUVYVBUHRU5IA7VH36LM",
+    "asset_path": "projects/songhong-sar-monitoring/assets/s1_composite_2026_wet"
+  }
+]

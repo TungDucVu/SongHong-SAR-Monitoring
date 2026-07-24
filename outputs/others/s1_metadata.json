@@ -1,0 +1,119 @@
+{
+  "generated_at": "2026-07-02T02:15:05.533633Z",
+  "project": "crested-library-500309-i2",
+  "total_images_10yr": 317,
+  "year_stats": [
+    {
+      "year": 2015,
+      "count": 37,
+      "status": "✅ OK"
+    },
+    {
+      "year": 2016,
+      "count": 37,
+      "status": "✅ OK"
+    },
+    {
+      "year": 2017,
+      "count": 29,
+      "status": "✅ OK"
+    },
+    {
+      "year": 2018,
+      "count": 31,
+      "status": "✅ OK"
+    },
+    {
+      "year": 2019,
+      "count": 29,
+      "status": "✅ OK"
+    },
+    {
+      "year": 2020,
+      "count": 34,
+      "status": "✅ OK"
+    },
+    {
+      "year": 2021,
+      "count": 29,
+      "status": "✅ OK"
+    },
+    {
+      "year": 2022,
+      "count": 30,
+      "status": "✅ OK"
+    },
+    {
+      "year": 2023,
+      "count": 30,
+      "status": "✅ OK"
+    },
+    {
+      "year": 2024,
+      "count": 31,
+      "status": "✅ OK"
+    }
+  ],
+  "month_stats_2020_2024": [
+    {
+      "month": 1,
+      "month_name": "Jan",
+      "count": 13
+    },
+    {
+      "month": 2,
+      "month_name": "Feb",
+      "count": 11
+    },
+    {
+      "month": 3,
+      "month_name": "Mar",
+      "count": 13
+    },
+    {
+      "month": 4,
+      "month_name": "Apr",
+      "count": 13
+    },
+    {
+      "month": 5,
+      "month_name": "May",
+      "count": 13
+    },
+    {
+      "month": 6,
+      "month_name": "Jun",
+      "count": 12
+    },
+    {
+      "month": 7,
+      "month_name": "Jul",
+      "count": 13
+    },
+    {
+      "month": 8,
+      "month_name": "Aug",
+      "count": 13
+    },
+    {
+      "month": 9,
+      "month_name": "Sep",
+      "count": 12
+    },
+    {
+      "month": 10,
+      "month_name": "Oct",
+      "count": 14
+    },
+    {
+      "month": 11,
+      "month_name": "Nov",
+      "count": 14
+    },
+    {
+      "month": 12,
+      "month_name": "Dec",
+      "count": 13
+    }
+  ]
+}
