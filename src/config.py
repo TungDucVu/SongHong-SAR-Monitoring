@@ -8,6 +8,7 @@ import os
 # GEE settings
 GEE_PROJECT = 'songhong-sar-monitoring'
 ASSET_AOI_PATH = f'projects/{GEE_PROJECT}/assets/song_hong_aoi'
+PIPELINE_VERSION = '1.0-OptionA-Production'
 
 # Sentinel-1 filter settings
 S1_COLLECTION = 'COPERNICUS/S1_GRD'
