@@ -1,22 +1,41 @@
 # Thư mục Kết quả Đầu ra (Pipeline Outputs & Visualizations)
 
-Thư mục này chứa toàn bộ các sản phẩm kết quả trích xuất vector, bản đồ tương tác HTML và các báo cáo định lượng kiểm chứng của dự án.
+Thư mục này quản lý tập trung toàn bộ các sản phẩm kết quả trích xuất vector, bản đồ tương tác HTML, báo cáo ấn phẩm khoa học và các file thống kê kiểm chứng của dự án.
 
-## 📁 Cấu trúc Thư mục Kết quả
+## 📁 Cấu trúc Thư mục
 
 ```
 outputs/
-├── reach1_s1_shoreline_2024_*.geojson   # Vector đường bờ GeoJSON Reach 1 (Dry/Wet)
-├── reach2_s1_shoreline_2024_*.geojson   # Vector đường bờ GeoJSON Reach 2 (Dry/Wet)
-├── reach3_s1_shoreline_2024_*.geojson   # Vector đường bờ GeoJSON Reach 3 (Dry/Wet)
-├── reach1_s2_ref_2024_*.geojson         # Vector tham chiếu S2 Reach 1
-├── reach2_s2_ref_2024_*.geojson         # Vector tham chiếu S2 Reach 2
-├── reach3_s2_ref_2024_*.geojson         # Vector tham chiếu S2 Reach 3
-├── map/                                 # Bản đồ tương tác Folium HTML
-│   ├── hybrid_shoreline_map_2024_dry.html  # Bản đồ Master Hybrid toàn sông (Mùa khô)
-│   ├── hybrid_shoreline_map_2024_wet.html  # Bản đồ Master Hybrid toàn sông (Mùa mưa)
-│   └── reach*_interactive_map_2024_*.html  # Bản đồ tương tác chi tiết từng Reach
-└── others/                              # Báo cáo thống kê CSV & log kiểm chứng
+├── README.md              # Tài liệu hướng dẫn sử dụng sản phẩm đầu ra
+├── map/                   # 🗺️ Thư mục chứa 8 bản đồ tương tác Folium HTML
+│   ├── hybrid_shoreline_map_2024_dry.html  # Master Hybrid toàn sông (171.84 km) Mùa khô
+│   ├── hybrid_shoreline_map_2024_wet.html  # Master Hybrid toàn sông (171.84 km) Mùa mưa
+│   ├── reach1_interactive_map_2024_dry.html
+│   ├── reach1_interactive_map_2024_wet.html
+│   ├── reach2_interactive_map_2024_dry.html
+│   ├── reach2_interactive_map_2024_wet.html
+│   ├── reach3_interactive_map_2024_dry.html
+│   └── reach3_interactive_map_2024_wet.html
+├── REPORT/                # 📄 Thư mục chứa Báo cáo Nghiên cứu Khoa học & Slides
+│   ├── README.md                       # Thuyết minh tài liệu báo cáo
+│   ├── bao_cao_giam_sat_song_hong.md  # Báo cáo khoa học Markdown
+│   ├── bao_cao_giam_sat_song_hong.tex # Báo cáo khoa học LaTeX ấn phẩm
+│   ├── slide_bao_cao_thuc_tap.html    # Bài trình bày Slide HTML5 tương tác
+│   └── figures/                        # 🖼️ Thư mục chứa 30 hình ảnh & biểu đồ PNG
+│       ├── fig1_reach_error_comparison.png
+│       ├── fig4_error_cdf_percentiles.png
+│       ├── fig5_water_sand_area_dynamics.png
+│       └── ...
+└── others/                # 📐 Thư mục chứa 14 file GeoJSON vector & Bảng thống kê CSV
+    ├── reach1_s1_shoreline_2024_dry.geojson
+    ├── reach1_s1_shoreline_2024_wet.geojson
+    ├── reach2_s1_shoreline_2024_dry.geojson
+    ├── reach2_s1_shoreline_2024_wet.geojson
+    ├── reach3_s1_shoreline_2024_dry.geojson
+    ├── reach3_s1_shoreline_2024_wet.geojson
+    ├── reach*_s2_ref_2024_*.geojson
+    ├── validation_statistics_*.csv
+    └── rf_metrics_*.txt
 ```
 
 ## 🎨 Phân cấp Màu Đánh giá Sai số Vị trí (3-Tier Rating Standard)
