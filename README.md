@@ -94,16 +94,7 @@ Mở bản báo cáo phân tích khoa học chi tiết kèm biểu đồ trực 
 
 ---
 
-## 📌 Gợi Ý Mô Tả (Descriptions) Cho GitHub & Tiêu Đề Bài Báo
 
-### 🔹 1. GitHub About / Repository Description (Tiếng Anh)
-> *An automated publication-grade Earth Engine & Python Machine Learning pipeline for 10-year multi-temporal SAR shoreline extraction and river island morphodynamics monitoring of the Red River in Hanoi (171.84 km).*
-
-### 🔹 2. GitHub About / Repository Description (Tiếng Việt)
-> *Hệ thống viễn thám bán tự động GEE & Machine Learning (Random Forest) giám sát biến động đường bờ và bồi ngập bãi nổi Sông Hồng qua Hà Nội (171.84 km) giai đoạn 2017 – 2026.*
-
-### 🔹 3. GitHub Topics / Repository Tags
-`earth-engine` · `sentinel-1` · `sar-remote-sensing` · `shoreline-extraction` · `red-river-hanoi` · `random-forest` · `morphodynamics` · `gis` · `geopandas` · `vietnam-space-center`
 
 ### 🔹 4. Short Paper / Report Abstract Subtitle (Tiêu đề phụ Báo cáo/Bài báo)
 > **English:** *Seasonal Dynamics of Shoreline Migration and Sandbar Morphodynamics in the Red River (Hanoi Corridor) Derived from Sentinel-1 SAR and Sentinel-2 Multi-Temporal Composites (2017–2026).*
