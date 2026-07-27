@@ -91,12 +91,18 @@ Bảng tổng hợp chỉ số kiểm chứng vị trí (Positional Validation M
             report_md += f"| {row['Year']} | **{row['Season']}** | - | - | - | - | - | {row['Status']} |\n"
             
     out_path = os.path.join(PROJECT_ROOT, "outputs", "REPORT", "multiyear_shoreline_summary_report.md")
+    docs_path = os.path.join(PROJECT_ROOT, "docs", "multiyear_shoreline_summary_report.md")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    os.makedirs(os.path.dirname(docs_path), exist_ok=True)
+    
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write(report_md)
+    with open(docs_path, 'w', encoding='utf-8') as f:
+        f.write(report_md)
         
-    print(f"[Report] Saved consolidated multi-year report to: {out_path}")
+    print(f"[Report] Saved consolidated multi-year report to: {out_path} and {docs_path}")
     print("\n" + df.to_string(index=False))
+
 
 if __name__ == '__main__':
     generate_report()
