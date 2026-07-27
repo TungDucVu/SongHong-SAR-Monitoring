@@ -124,25 +124,27 @@ def run_pipeline_for_reach2(year=2024, season='dry'):
     cleaned_gdf = clean_shoreline_graph(raw_gdf)
     smoothed_gdf, smooth_metrics = smooth_and_simplify_shoreline(cleaned_gdf)
     
-    output_dir = os.path.join("outputs", "others")
-    os.makedirs(output_dir, exist_ok=True)
+    season_dir = os.path.join("outputs", str(year), f"{year}_{season.lower()}")
+    others_dir = os.path.join("outputs", "others")
+    os.makedirs(season_dir, exist_ok=True)
+    os.makedirs(others_dir, exist_ok=True)
     
-    out_s1_path = os.path.join(output_dir, f"reach2_s1_shoreline_{year}_{season}.geojson")
-    out_s2_path = os.path.join(output_dir, f"reach2_s2_ref_{year}_{season}.geojson")
+    out_s1_path = os.path.join(season_dir, f"reach2_s1_shoreline_{year}_{season}.geojson")
+    out_s2_path = os.path.join(season_dir, f"reach2_s2_ref_{year}_{season}.geojson")
     
     if not smoothed_gdf.empty:
         smoothed_gdf.to_crs("EPSG:4326").to_file(out_s1_path, driver="GeoJSON")
+        smoothed_gdf.to_crs("EPSG:4326").to_file(os.path.join(others_dir, f"reach2_s1_shoreline_{year}_{season}.geojson"), driver="GeoJSON")
         print(f"[Phase 7] Saved Reach 2 S1 shoreline to: {out_s1_path}")
         
     if not s2_ref_gdf.empty:
         s2_ref_gdf.to_crs("EPSG:4326").to_file(out_s2_path, driver="GeoJSON")
+        s2_ref_gdf.to_crs("EPSG:4326").to_file(os.path.join(others_dir, f"reach2_s2_ref_{year}_{season}.geojson"), driver="GeoJSON")
         print(f"[Phase 8] Saved Reach 2 S2 reference shoreline to: {out_s2_path}")
         
     val_stats = validate_shoreline(smoothed_gdf, s2_ref_gdf)
     
-    map_dir = os.path.join(output_dir, "map")
-    os.makedirs(map_dir, exist_ok=True)
-    html_out_path = os.path.join(map_dir, f"reach2_interactive_map_{year}_{season}.html")
+    html_out_path = os.path.join(season_dir, f"reach2_interactive_map_{year}_{season}.html")
     generate_reach_interactive_map(
         extracted_gdf=smoothed_gdf,
         s2_ref_gdf=s2_ref_gdf,
@@ -151,6 +153,17 @@ def run_pipeline_for_reach2(year=2024, season='dry'):
         year=year,
         season=season,
         output_html_path=html_out_path
+    )
+    legacy_map_dir = os.path.join(others_dir, "map")
+    os.makedirs(legacy_map_dir, exist_ok=True)
+    generate_reach_interactive_map(
+        extracted_gdf=smoothed_gdf,
+        s2_ref_gdf=s2_ref_gdf,
+        val_stats=val_stats,
+        reach_title="Reach 2 (Trung lưu Hà Nội)",
+        year=year,
+        season=season,
+        output_html_path=os.path.join(legacy_map_dir, f"reach2_interactive_map_{year}_{season}.html")
     )
     
     stats_summary = {
@@ -168,9 +181,21 @@ def run_pipeline_for_reach2(year=2024, season='dry'):
     return stats_summary
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Run Reach 2 Shoreline Extraction")
+    parser.add_argument("--year", type=int, default=2024, help="Year to process (2017-2026)")
+    parser.add_argument("--all_years", action="store_true", help="Process all years 2017 to 2026")
+    args = parser.parse_args()
+
     ee.Initialize(project=GEE_PROJECT)
-    run_pipeline_for_reach2(year=2024, season='dry')
-    run_pipeline_for_reach2(year=2024, season='wet')
+    target_years = range(2017, 2027) if args.all_years else [args.year]
+    
+    for yr in target_years:
+        print(f"\n=============================================================")
+        print(f" RUNNING REACH 2 SHORELINE EXTRACTION FOR YEAR {yr}")
+        print(f"=============================================================")
+        run_pipeline_for_reach2(year=yr, season='dry')
+        run_pipeline_for_reach2(year=yr, season='wet')
 
 if __name__ == "__main__":
     main()

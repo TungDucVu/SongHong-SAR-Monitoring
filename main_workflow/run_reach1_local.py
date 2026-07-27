@@ -279,25 +279,27 @@ def run_pipeline_for_reach1(season, reach1_ee_geom, reach1_corridor_utm, centerl
     cleaned_gdf = clean_shoreline_graph(raw_gdf)
     smoothed_gdf, smooth_metrics = smooth_and_simplify_shoreline(cleaned_gdf)
     
-    output_dir = os.path.join("outputs", "others")
-    os.makedirs(output_dir, exist_ok=True)
+    season_dir = os.path.join("outputs", str(year), f"{year}_{season.lower()}")
+    others_dir = os.path.join("outputs", "others")
+    os.makedirs(season_dir, exist_ok=True)
+    os.makedirs(others_dir, exist_ok=True)
     
-    out_s1_path = os.path.join(output_dir, f"reach1_s1_shoreline_{year}_{season}.geojson")
-    out_s2_path = os.path.join(output_dir, f"reach1_s2_ref_{year}_{season}.geojson")
+    out_s1_path = os.path.join(season_dir, f"reach1_s1_shoreline_{year}_{season}.geojson")
+    out_s2_path = os.path.join(season_dir, f"reach1_s2_ref_{year}_{season}.geojson")
     
     if not smoothed_gdf.empty:
         smoothed_gdf.to_crs("EPSG:4326").to_file(out_s1_path, driver="GeoJSON")
+        smoothed_gdf.to_crs("EPSG:4326").to_file(os.path.join(others_dir, f"reach1_s1_shoreline_{year}_{season}.geojson"), driver="GeoJSON")
         print(f"[Phase 7] Saved Reach 1 S1 shoreline to: {out_s1_path}")
         
     if not s2_ref_gdf.empty:
         s2_ref_gdf.to_crs("EPSG:4326").to_file(out_s2_path, driver="GeoJSON")
+        s2_ref_gdf.to_crs("EPSG:4326").to_file(os.path.join(others_dir, f"reach1_s2_ref_{year}_{season}.geojson"), driver="GeoJSON")
         print(f"[Phase 8] Saved Reach 1 S2 reference shoreline to: {out_s2_path}")
         
     val_stats = validate_shoreline(smoothed_gdf, s2_ref_gdf)
     
-    map_dir = os.path.join(output_dir, "map")
-    os.makedirs(map_dir, exist_ok=True)
-    html_out_path = os.path.join(map_dir, f"reach1_interactive_map_{year}_{season}.html")
+    html_out_path = os.path.join(season_dir, f"reach1_interactive_map_{year}_{season}.html")
     generate_reach_interactive_map(
         extracted_gdf=smoothed_gdf,
         s2_ref_gdf=s2_ref_gdf,
@@ -306,6 +308,18 @@ def run_pipeline_for_reach1(season, reach1_ee_geom, reach1_corridor_utm, centerl
         year=year,
         season=season,
         output_html_path=html_out_path
+    )
+    # Also save to others/map/ for legacy support
+    legacy_map_dir = os.path.join(others_dir, "map")
+    os.makedirs(legacy_map_dir, exist_ok=True)
+    generate_reach_interactive_map(
+        extracted_gdf=smoothed_gdf,
+        s2_ref_gdf=s2_ref_gdf,
+        val_stats=val_stats,
+        reach_title="Reach 1 (Thượng lưu Ba Vì)",
+        year=year,
+        season=season,
+        output_html_path=os.path.join(legacy_map_dir, f"reach1_interactive_map_{year}_{season}.html")
     )
     
     stats_summary = {
@@ -323,15 +337,18 @@ def run_pipeline_for_reach1(season, reach1_ee_geom, reach1_corridor_utm, centerl
     return stats_summary
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Run Reach 1 Shoreline Extraction")
+    parser.add_argument("--year", type=int, default=2024, help="Year to process (2017-2026)")
+    parser.add_argument("--all_years", action="store_true", help="Process all years 2017 to 2026")
+    args = parser.parse_args()
+
     ee.Initialize(project=GEE_PROJECT)
     
     cl_linestring = get_continuous_centerline()
     cl_gdf = gpd.GeoDataFrame(geometry=[cl_linestring], crs="EPSG:4326").to_crs("EPSG:32648")
     centerline_geom_utm = cl_gdf.geometry.iloc[0]
     centerline_fc = load_centerline()
-    
-    total_len = centerline_geom_utm.length
-    limit1 = centerline_geom_utm.project(Point(105.5415, 21.1528))
     
     reach1_geojson = load_reach_aoi(1)
     reach1_gdf = gpd.GeoDataFrame.from_features(reach1_geojson['features'], crs="EPSG:4326")
@@ -340,10 +357,16 @@ def main():
     
     bridges_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'bridges.geojson')
     bridges_gdf = load_manual_bridges(bridges_path)
+
+    target_years = range(2017, 2027) if args.all_years else [args.year]
     
-    dry_stats = run_pipeline_for_reach1(season='dry', reach1_ee_geom=reach1_ee_geom, reach1_corridor_utm=reach1_corridor_utm, centerline_fc=centerline_fc, bridges_gdf=bridges_gdf, year=2024)
-    wet_stats = run_pipeline_for_reach1(season='wet', reach1_ee_geom=reach1_ee_geom, reach1_corridor_utm=reach1_corridor_utm, centerline_fc=centerline_fc, bridges_gdf=bridges_gdf, year=2024)
-    
+    for yr in target_years:
+        print(f"\n=============================================================")
+        print(f" RUNNING REACH 1 SHORELINE EXTRACTION FOR YEAR {yr}")
+        print(f"=============================================================")
+        dry_stats = run_pipeline_for_reach1(season='dry', reach1_ee_geom=reach1_ee_geom, reach1_corridor_utm=reach1_corridor_utm, centerline_fc=centerline_fc, bridges_gdf=bridges_gdf, year=yr)
+        wet_stats = run_pipeline_for_reach1(season='wet', reach1_ee_geom=reach1_ee_geom, reach1_corridor_utm=reach1_corridor_utm, centerline_fc=centerline_fc, bridges_gdf=bridges_gdf, year=yr)
+        
     print("\n--- REACH 1 RUN COMPLETE ---")
 
 if __name__ == "__main__":

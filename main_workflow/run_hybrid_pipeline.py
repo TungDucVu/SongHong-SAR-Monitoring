@@ -22,26 +22,35 @@ from main_workflow.run_reach2_local import main as run_reach2
 from main_workflow.run_reach3_local import main as run_reach3
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Master Pipeline Runner for 3 Reaches")
+    parser.add_argument("--year", type=int, default=2024, help="Year to process (2017-2026)")
+    parser.add_argument("--all_years", action="store_true", help="Process all years 2017 to 2026")
+    args = parser.parse_args()
+
     print("=============================================================")
     print(" SONG HONG SAR MONITORING: MASTER PIPELINE RUNNER (3 REACHES)")
     print("=============================================================")
     
     ee.Initialize(project=GEE_PROJECT)
-    
-    print("\n[Step 1/4] Running Reach 1 Local RF Model (Upper)...")
-    run_reach1()
-    
-    print("\n[Step 2/4] Running Reach 2 Local RF Model (Urban Hanoi)...")
-    run_reach2()
-    
-    print("\n[Step 3/4] Running Reach 3 Local RF Model (Delta)...")
-    run_reach3()
-    
-    print("\n[Step 4/4] Generating Unified Hybrid Interactive Maps...")
+    target_years = range(2017, 2027) if args.all_years else [args.year]
     plot_script = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "plot_hybrid_map.py")
-    subprocess.run([sys.executable, plot_script, "--year", "2024"], check=True)
+
+    for yr in target_years:
+        print(f"\n>>> PROCESSING YEAR {yr} ACROSS ALL 3 REACHES <<<")
+        print("\n[Step 1/4] Running Reach 1 Local RF Model (Upper)...")
+        subprocess.run([sys.executable, "-m", "main_workflow.run_reach1_local", "--year", str(yr)], check=True)
+        
+        print("\n[Step 2/4] Running Reach 2 Local RF Model (Urban Hanoi)...")
+        subprocess.run([sys.executable, "-m", "main_workflow.run_reach2_local", "--year", str(yr)], check=True)
+        
+        print("\n[Step 3/4] Running Reach 3 Local RF Model (Delta)...")
+        subprocess.run([sys.executable, "-m", "main_workflow.run_reach3_local", "--year", str(yr)], check=True)
+        
+        print(f"\n[Step 4/4] Generating Unified Hybrid Interactive Maps for {yr}...")
+        subprocess.run([sys.executable, plot_script, "--year", str(yr)], check=True)
     
-    print("\n[SUCCESS] Full 3-Reach Hybrid Pipeline execution complete for 2024 (Dry & Wet seasons)!")
+    print("\n[SUCCESS] Full 3-Reach Hybrid Pipeline execution complete!")
 
 if __name__ == "__main__":
     main()

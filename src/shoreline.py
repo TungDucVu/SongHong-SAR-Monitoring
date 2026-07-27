@@ -1176,10 +1176,10 @@ def generate_validation_shoreline_s2(year, season, aoi_geometry, bridge_mask=Non
         
     return ref_gdf, water_dissolved
 
-def validate_shoreline(extracted_gdf, reference_gdf):
+def validate_shoreline(extracted_gdf, reference_gdf, spacing=5.0):
     """
     Computes nearest-neighbor distance metrics between extracted and reference shorelines
-    after 5m resampling to prevent vertex-density bias.
+    after resampling to prevent vertex-density bias.
     
     Returns:
       metrics (dict): Comprehensive positional QC stats, raw distances, points, and association info.
@@ -1205,7 +1205,9 @@ def validate_shoreline(extracted_gdf, reference_gdf):
             'ext_points_info': []
         }
         
-    def resample_gdf_points_with_meta(gdf, spacing=5.0):
+    def resample_gdf_points_with_meta(gdf, spacing=spacing):
+        import shapely
+        has_line_interpolate = hasattr(shapely, 'line_interpolate_point')
         points_info = []
         for idx, row in gdf.iterrows():
             geom = row.geometry
@@ -1222,14 +1224,25 @@ def validate_shoreline(extracted_gdf, reference_gdf):
                 distances = np.arange(0, length, spacing)
                 if len(distances) == 0 or distances[-1] < length:
                     distances = np.append(distances, length)
-                for d in distances:
-                    pt = g.interpolate(d)
-                    points_info.append({
-                        'point': pt,
-                        'segment_id': seg_id,
-                        'bank_type': bank_type,
-                        'is_island': is_island
-                    })
+                
+                if has_line_interpolate:
+                    pts = shapely.line_interpolate_point(g, distances)
+                    for pt in pts:
+                        points_info.append({
+                            'point': pt,
+                            'segment_id': seg_id,
+                            'bank_type': bank_type,
+                            'is_island': is_island
+                        })
+                else:
+                    for d in distances:
+                        pt = g.interpolate(d)
+                        points_info.append({
+                            'point': pt,
+                            'segment_id': seg_id,
+                            'bank_type': bank_type,
+                            'is_island': is_island
+                        })
                     
             if geom.geom_type == 'LineString':
                 add_pts(geom)
@@ -1238,9 +1251,9 @@ def validate_shoreline(extracted_gdf, reference_gdf):
                     add_pts(g)
         return points_info
         
-    # Resample both shorelines at 5m
-    ext_points_info = resample_gdf_points_with_meta(extracted_gdf, spacing=5.0)
-    ref_points_info = resample_gdf_points_with_meta(reference_gdf, spacing=5.0)
+    # Resample both shorelines at requested spacing
+    ext_points_info = resample_gdf_points_with_meta(extracted_gdf, spacing=spacing)
+    ref_points_info = resample_gdf_points_with_meta(reference_gdf, spacing=spacing)
     
     if not ext_points_info or not ref_points_info:
         print("[Warning] No points extracted after resampling.")
