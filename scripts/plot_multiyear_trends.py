@@ -135,13 +135,14 @@ def generate_charts(df):
     ax.plot(dry_df['Year'], dry_df['RMSE (m)'], marker='o', linestyle='-', color='#2980b9', linewidth=2.2, label='Dry Season RMSE (m)')
     ax.plot(wet_df['Year'], wet_df['RMSE (m)'], marker='s', linestyle='--', color='#e67e22', linewidth=2.2, label='Wet Season RMSE (m)')
     ax.plot(dry_df['Year'], dry_df['Median Error (m)'], marker='^', linestyle=':', color='#27ae60', linewidth=2.0, label='Dry Season Median (P50) Error (m)')
+    ax.plot(wet_df['Year'], wet_df['Median Error (m)'], marker='v', linestyle=':', color='#c0392b', linewidth=2.0, label='Wet Season Median (P50) Error (m)')
     
     ax.axhline(y=30, color='#7f8c8d', linestyle='--', linewidth=1.2, label='Ngưỡng Chuẩn Tốt (< 30m / 3 pixels)')
     ax.set_title('Xu Hướng Sai Số Vị Trí Đường Bờ SAR vs. S2 Reference (2017 – 2026)', fontsize=13, fontweight='bold', pad=15)
     ax.set_xlabel('Năm (Year)', fontsize=11, fontweight='bold', labelpad=10)
     ax.set_ylabel('Sai Số Vị Trí (Meters)', fontsize=11, fontweight='bold', labelpad=10)
     ax.set_xticks(years)
-    ax.legend(frameon=True, facecolor='white', framealpha=0.9, fontsize=10)
+    ax.legend(frameon=True, facecolor='white', framealpha=0.9, fontsize=9.5, loc='upper left')
     ax.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
     fig_path2 = os.path.join(FIGURES_DIR, 'fig_multiyear_positional_accuracy_trend.png')
@@ -158,8 +159,8 @@ def generate_charts(df):
     l1 = ax1.plot(dry_plot_len['Year'], dry_plot_len['Shoreline Length (km)'], marker='o', color='#8e44ad', linewidth=2.2, label='Dry Season Length (km)')
     l2 = ax1.plot(wet_df['Year'], wet_df['Shoreline Length (km)'], marker='s', color='#34495e', linewidth=2.2, linestyle='--', label='Wet Season Length (km)')
     
-    ax2.bar(dry_df['Year'] - 0.15, dry_df['Island Count'], width=0.3, color='#f39c12', alpha=0.6, label='Dry Island Count')
-    ax2.bar(wet_df['Year'] + 0.15, wet_df['Island Count'], width=0.3, color='#d35400', alpha=0.6, label='Wet Island Count')
+    b1 = ax2.bar(dry_df['Year'] - 0.15, dry_df['Island Count'], width=0.3, color='#f39c12', alpha=0.6, label='Dry Island Count')
+    b2 = ax2.bar(wet_df['Year'] + 0.15, wet_df['Island Count'], width=0.3, color='#d35400', alpha=0.6, label='Wet Island Count')
     
     ax1.set_title('Biến Động Chiều Dài Đường Bờ Vector & Số Lượng Cù Lao/Bãi Nổi (2017 – 2026)', fontsize=13, fontweight='bold', pad=15)
     ax1.set_xlabel('Năm (Year)', fontsize=11, fontweight='bold', labelpad=10)
@@ -168,12 +169,18 @@ def generate_charts(df):
     ax1.set_xticks(years)
     ax2.set_yticks(range(0, 7))
     
+    # Combined legend for twin axes
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right', frameon=True, facecolor='white', framealpha=0.9, fontsize=9.5)
+    
     ax1.grid(True, linestyle='--', alpha=0.4)
     plt.tight_layout()
     fig_path3 = os.path.join(FIGURES_DIR, 'fig_multiyear_shoreline_length_and_islands.png')
     plt.savefig(fig_path3, dpi=300)
     plt.close()
     print(f"  Saved: {fig_path3}")
+
 
 def main():
     df = parse_all_seasonal_data(2017, 2026)
