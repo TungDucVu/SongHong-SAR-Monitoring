@@ -483,7 +483,7 @@ def generate_spatial_error_map(ext_points_info, reference_gdf, year, season):
     m.get_root().html.add_child(folium.Element(north_arrow_html))
     folium.LayerControl().add_to(m)
     
-    map_path = os.path.join(OUTPUT_DIR, f"validation_error_map_{year}_{season}.html")
+    map_path = os.path.join(season_out_dir, f"validation_error_map_{year}_{season}.html")
     m.save(map_path)
     print(f"[Folium] Saved spatial error map to: {map_path}")
 
@@ -621,37 +621,36 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
     limit1 = centerline_geom_utm.project(split_pt_utm)
     limit2 = 2.0 * total_len / 3.0
     
-    # Reach 2 & 3: limit1 to total_len
-    reach2_3_line_utm = substring(centerline_geom_utm, limit1, total_len)
-    
     aoi_geojson = load_local_aoi()
     aoi_gdf = gpd.GeoDataFrame.from_features(aoi_geojson['features'], crs="EPSG:4326")
     aoi_utm = aoi_gdf.to_crs("EPSG:32648").geometry.union_all()
     
-    reach2_3_corridor_utm = reach2_3_line_utm.buffer(2000).intersection(aoi_utm)
-    reach2_3_corridor_wgs84 = gpd.GeoDataFrame(geometry=[reach2_3_corridor_utm], crs="EPSG:32648").to_crs("EPSG:4326").geometry.iloc[0]
-    reach2_3_geojson = json.loads(gpd.GeoSeries([reach2_3_corridor_wgs84]).to_json())
-    reach2_3_ee_geom = ee.Geometry(reach2_3_geojson['features'][0]['geometry'])
+    # Full corridor geometry covering Reach 1, 2 & 3
+    full_corridor_utm = centerline_geom_utm.buffer(2500).intersection(aoi_utm)
+
+    full_corridor_wgs84 = gpd.GeoDataFrame(geometry=[full_corridor_utm], crs="EPSG:32648").to_crs("EPSG:4326").geometry.iloc[0]
+    full_corridor_geojson = json.loads(gpd.GeoSeries([full_corridor_wgs84]).to_json())
+    full_corridor_ee_geom = ee.Geometry(full_corridor_geojson['features'][0]['geometry'])
     
     # =============================================================
-    # --- REACH 2 & 3: STANDARD GLOBAL RF MODEL (NO BRIDGE PROCESSING) ---
+    # --- FULL CORRIDOR (REACH 1, 2 & 3): GLOBAL RF MODEL ---
     # =============================================================
-    print("[Reach 2 & 3] Processing standard Global RF model for Reach 2 & 3...")
-    s2_ref_gdf, s2_water_poly = generate_validation_shoreline_s2(year, season, reach2_3_ee_geom, bridge_mask=None)
+    print("[Full Corridor] Processing Global RF model for Reach 1, 2 & 3...")
+    s2_ref_gdf, s2_water_poly = generate_validation_shoreline_s2(year, season, full_corridor_ee_geom, bridge_mask=None)
     if not s2_ref_gdf.empty:
-        s2_ref_gdf = s2_ref_gdf[s2_ref_gdf.geometry.intersects(reach2_3_corridor_utm)]
+        s2_ref_gdf = s2_ref_gdf[s2_ref_gdf.geometry.intersects(full_corridor_utm)]
         
-    composite_r23 = create_seasonal_composite(year, season, reach2_3_ee_geom)
-    training_fc_r23 = load_training_polygons().filterBounds(reach2_3_ee_geom)
+    composite_r23 = create_seasonal_composite(year, season, full_corridor_ee_geom)
+    training_fc_r23 = load_training_polygons().filterBounds(full_corridor_ee_geom)
     r23_best_params = {'numberOfTrees': 300, 'variablesPerSplit': 3, 'bagFraction': 0.5}
     r23_classifier, _ = train_classifier(training_fc_r23, composite_r23, GLOBAL_FEATURES, r23_best_params)
     
-    classified_r23, _ = classify_image(composite_r23.clip(reach2_3_ee_geom), r23_classifier, GLOBAL_FEATURES)
+    classified_r23, _ = classify_image(composite_r23.clip(full_corridor_ee_geom), r23_classifier, GLOBAL_FEATURES)
     reach2_3_water = classified_r23.eq(1)
     
     calibrated_water = calibrate_s1_water_mask(reach2_3_water.rename('classification'), composite_r23, s2_ref_gdf)
     water_refined, _, _ = refine_classification(
-        calibrated_water, reach2_3_ee_geom, centerline_fc,
+        calibrated_water, full_corridor_ee_geom, centerline_fc,
         open_radius=SHORELINE_OPEN_SIZE, close_radius=SHORELINE_CLOSE_SIZE
     )
     
@@ -666,7 +665,8 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
         s2_water_poly=s2_water_poly
     )
     if not raw_gdf.empty:
-        raw_gdf = raw_gdf[raw_gdf.geometry.intersects(reach2_3_corridor_utm)]
+        raw_gdf = raw_gdf[raw_gdf.geometry.intersects(full_corridor_utm)]
+
         
     cleaned_gdf = clean_shoreline_graph(raw_gdf)
     smoothed_gdf, smooth_metrics = smooth_and_simplify_shoreline(cleaned_gdf)
