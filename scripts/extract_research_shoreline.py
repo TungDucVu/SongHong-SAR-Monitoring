@@ -2,7 +2,16 @@ import os
 import sys
 import time
 import json
+
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 import ee
+
 import geopandas as gpd
 import pandas as pd
 import numpy as np
@@ -20,6 +29,12 @@ from src.config import (
     GEE_PROJECT, CLASSIFIER_FEATURES, OUTPUT_DIR,
     SHORELINE_OPEN_SIZE, SHORELINE_CLOSE_SIZE, SHORELINE_CONFIG
 )
+
+def get_season_output_dir(year, season):
+    season_dir = os.path.join(OUTPUT_DIR, str(year), f"{year}_{season.lower()}")
+    os.makedirs(season_dir, exist_ok=True)
+    return season_dir
+
 from src.aoi import get_aoi_geometry, load_local_aoi
 from src.collection import create_seasonal_composite
 from src.classification import (
@@ -292,7 +307,8 @@ def generate_validation_plots(distances, year, season):
     plt.grid(axis='y', linestyle='--', alpha=0.4)
     plt.tight_layout()
     
-    hist_path = os.path.join(OUTPUT_DIR, f"error_histogram_{year}_{season}.png")
+    season_out_dir = get_season_output_dir(year, season)
+    hist_path = os.path.join(season_out_dir, f"error_histogram_{year}_{season}.png")
     plt.savefig(hist_path, dpi=300)
     plt.close()
     print(f"[Plotting] Saved error histogram to: {hist_path}")
@@ -322,7 +338,7 @@ def generate_validation_plots(distances, year, season):
     plt.grid(True, which="both", linestyle="--", alpha=0.3)
     plt.tight_layout()
     
-    cdf_path = os.path.join(OUTPUT_DIR, f"error_cdf_{year}_{season}.png")
+    cdf_path = os.path.join(season_out_dir, f"error_cdf_{year}_{season}.png")
     plt.savefig(cdf_path, dpi=300)
     plt.close()
     print(f"[Plotting] Saved Empirical CDF plot to: {cdf_path}")
@@ -331,7 +347,9 @@ def generate_spatial_error_map(ext_points_info, reference_gdf, year, season):
     """
     Generates an interactive Folium map showing positional errors at 50m intervals (Task 5).
     """
+    season_out_dir = get_season_output_dir(year, season)
     print(f"[Folium] Generating interactive spatial error map...")
+
     m = folium.Map(location=[21.03, 105.85], zoom_start=11, control_scale=True)
     folium.TileLayer('openstreetmap', name='OpenStreetMap').add_to(m)
     folium.TileLayer(
@@ -666,9 +684,10 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
         final_features.append(new_row)
         
     final_gdf = gpd.GeoDataFrame(final_features, crs="EPSG:32648")
+    season_out_dir = get_season_output_dir(year, season)
     
     # Save final vector outputs
-    out_geojson_path = os.path.join(OUTPUT_DIR, f"shoreline_{year}_{season}_final.geojson")
+    out_geojson_path = os.path.join(season_out_dir, f"shoreline_{year}_{season}_final.geojson")
     final_gdf.to_file(out_geojson_path, driver="GeoJSON")
     print(f"[Phase 7] Saved finalized shoreline to: {out_geojson_path}")
     
@@ -677,7 +696,7 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
     
     # Save validation reference GeoJSON
     if not s2_ref_gdf.empty:
-        ref_geojson_path = os.path.join(OUTPUT_DIR, f"shoreline_{year}_{season}_s2_ref.geojson")
+        ref_geojson_path = os.path.join(season_out_dir, f"shoreline_{year}_{season}_s2_ref.geojson")
         s2_ref_gdf.to_file(ref_geojson_path, driver="GeoJSON")
         print(f"[Phase 8] Saved S2 reference shoreline to: {ref_geojson_path}")
         
@@ -696,7 +715,7 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
         {'Metric': 'Hausdorff (m)', 'Value': validation_metrics['hausdorff_dist_m']}
     ]
     stats_df = pd.DataFrame(stats_data)
-    stats_csv_path = os.path.join(OUTPUT_DIR, f"validation_statistics_{year}_{season}.csv")
+    stats_csv_path = os.path.join(season_out_dir, f"validation_statistics_{year}_{season}.csv")
     stats_df.to_csv(stats_csv_path, index=False)
     print(f"[Validation] Saved statistics CSV to: {stats_csv_path}")
     
@@ -714,38 +733,38 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
         buffer_data.append({'Buffer (m)': b, 'Coverage (%)': pct})
     
     buffer_df = pd.DataFrame(buffer_data)
-    buffer_csv_path = os.path.join(OUTPUT_DIR, f"buffer_accuracy_{year}_{season}.csv")
+    buffer_csv_path = os.path.join(season_out_dir, f"buffer_accuracy_{year}_{season}.csv")
     buffer_df.to_csv(buffer_csv_path, index=False)
     print(f"[Validation] Saved buffer accuracy CSV to: {buffer_csv_path}")
     
     # --- REACH-WISE BREAKDOWN ---
-    ext_points_info = validation_metrics['ext_points_info']
-    reach_assignments = []
-    for info in ext_points_info:
-        pt = Point(info['ext_x'], info['ext_y'])
-        proj_dist = centerline_union.project(pt)
-        if proj_dist < limit1:
-            reach_assignments.append('Reach 1')
-        elif proj_dist < limit2:
-            reach_assignments.append('Reach 2')
-        else:
-            reach_assignments.append('Reach 3')
-    reach_assignments = np.array(reach_assignments)
-    
     reach_stats = {}
+    centerline_geom = centerline_union
+    ext_points_info = validation_metrics['ext_points_info']
+    
     for r_name, r_label in [('Reach 1', 'Reach 1 (Upper)'), ('Reach 2', 'Reach 2 (Middle)'), ('Reach 3', 'Reach 3 (Lower)')]:
-        r_mask = (reach_assignments == r_name)
-        r_dists = distances[r_mask]
-        
-        if len(r_dists) > 0:
-            rmse = np.sqrt(np.mean(r_dists ** 2))
-            mean_err = np.mean(r_dists)
-            median_err = np.median(r_dists)
-            hausdorff = np.max(r_dists)
-            p95 = np.percentile(r_dists, 95)
-        else:
-            rmse = mean_err = median_err = hausdorff = p95 = 0.0
+        r_points_info = []
+        for info in ext_points_info:
+            pt = Point(info['ext_x'], info['ext_y'])
+            proj_dist = centerline_geom.project(pt)
+            if r_name == 'Reach 1' and proj_dist < limit1:
+                r_points_info.append(info)
+            elif r_name == 'Reach 2' and limit1 <= proj_dist < limit2:
+                r_points_info.append(info)
+            elif r_name == 'Reach 3' and proj_dist >= limit2:
+                r_points_info.append(info)
+                
+        if len(r_points_info) == 0:
+            reach_stats[r_name] = {'Points': 0, 'Mean': 0.0, 'Median': 0.0, 'RMSE': 0.0, 'Hausdorff': 0.0, 'P95': 0.0}
+            continue
             
+        r_dists = np.array([info['distance'] for info in r_points_info])
+        mean_err = np.mean(r_dists)
+        median_err = np.median(r_dists)
+        rmse = np.sqrt(np.mean(r_dists ** 2))
+        hausdorff = np.max(r_dists)
+        p95 = np.percentile(r_dists, 95)
+        
         reach_stats[r_name] = {
             'Points': len(r_dists),
             'Mean': float(mean_err),
@@ -762,7 +781,7 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
         row_data['Reach'] = r_label
         reach_rows.append(row_data)
     reach_df = pd.DataFrame(reach_rows)[['Reach', 'Points', 'Mean', 'Median', 'RMSE', 'Hausdorff', 'P95']]
-    reach_csv_path = os.path.join(OUTPUT_DIR, f"reach_validation_statistics_{year}_{season}.csv")
+    reach_csv_path = os.path.join(season_out_dir, f"reach_validation_statistics_{year}_{season}.csv")
     reach_df.to_csv(reach_csv_path, index=False)
     print(f"[Validation] Saved reach-specific statistics CSV to: {reach_csv_path}")
 
@@ -778,7 +797,7 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
     for info in ext_points_info:
         dist = info['distance']
         if dist > 100.0:
-            pt = info['point']
+            pt = Point(info['ext_x'], info['ext_y'])
             pt_wgs = gpd.GeoSeries([pt], crs="EPSG:32648").to_crs("EPSG:4326").iloc[0]
             outliers_data.append({
                 'geometry': pt_wgs,
@@ -792,7 +811,7 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
             })
             
     outliers_gdf = gpd.GeoDataFrame(outliers_data, crs="EPSG:4326")
-    outliers_geojson_path = os.path.join(OUTPUT_DIR, f"validation_outliers_{year}_{season}.geojson")
+    outliers_geojson_path = os.path.join(season_out_dir, f"validation_outliers_{year}_{season}.geojson")
     outliers_gdf.to_file(outliers_geojson_path, driver="GeoJSON")
     print(f"[Validation] Saved outliers GeoJSON to: {outliers_geojson_path} (Count: {len(outliers_gdf)})")
     
@@ -948,7 +967,7 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
     m.get_root().html.add_child(folium.Element(north_arrow_html))
     folium.LayerControl().add_to(m)
     
-    qc_map_path = os.path.join(OUTPUT_DIR, f"shoreline_qc_{year}_{season}.html")
+    qc_map_path = os.path.join(season_out_dir, f"shoreline_qc_{year}_{season}.html")
     m.save(qc_map_path)
     print(f"[Folium] Saved Shoreline QC map to: {qc_map_path}")
     
@@ -1016,14 +1035,28 @@ def process_season(year, season, aoi_geometry, centerline_fc, training_fc):
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Run SongHong Shoreline Extraction Hybrid Pipeline")
-    parser.add_argument('--year', type=int, default=2024, help="Year to process (default: 2024)")
+    parser.add_argument('--year', type=int, default=None, help="Single year to process (overrides start/end year)")
+    parser.add_argument('--start-year', type=int, default=2017, help="Start year (default: 2017)")
+    parser.add_argument('--end-year', type=int, default=2026, help="End year (default: 2026)")
+    parser.add_argument('--seasons', type=str, choices=['dry', 'wet', 'both'], default='both', help="Season(s) to process")
+    parser.add_argument('--overwrite', action='store_true', default=True, help="Force overwrite existing outputs")
     args = parser.parse_args()
     
-    year = args.year
-    
+    if args.year is not None:
+        start_year = args.year
+        end_year = args.year
+    else:
+        start_year = args.start_year
+        end_year = args.end_year
+        
+    if args.seasons == 'both':
+        target_seasons = ['dry', 'wet']
+    else:
+        target_seasons = [args.seasons]
+        
     if not ee.data.is_initialized():
         ee.Initialize(project=GEE_PROJECT)
-    print(f"[GEE] Initialized successfully with project: {GEE_PROJECT} for year {year}")
+    print(f"[GEE] Initialized successfully with project: {GEE_PROJECT} for years {start_year}-{end_year}")
     
     # Load centerline and construct full geometry
     cl_linestring = get_continuous_centerline()
@@ -1042,19 +1075,53 @@ def main():
     centerline_fc = load_centerline()
     training_fc = load_training_polygons()
     
-    print(f"[Hybrid Pipeline] Running for Reach 1, 2, and 3 for Year {year}...")
+    total_runs = (end_year - start_year + 1) * len(target_seasons)
+    completed = 0
+    summary_results = []
     
-    # Run Dry
-    dry_metrics, dry_buffer, dry_outliers_count, dry_reach_stats = process_season(year, 'dry', full_ee_geom, centerline_fc, training_fc)
+    print(f"\n=======================================================")
+    print(f"[START] BAT DAU CHAY PIPELINE CHUOI THOI GIAN ({start_year} - {end_year})")
+    print(f"   Tong so luot chay: {total_runs} (Mua: {target_seasons})")
+    print(f"=======================================================\n")
     
-    # Run Wet (Skipped as requested)
-    # wet_metrics, wet_buffer, wet_outliers_count, wet_reach_stats = process_season(year, 'wet', full_ee_geom, centerline_fc, training_fc)
-    
-    # Generate publication-grade Markdown validation report (Skipped to avoid errors without wet stats)
-    # generate_validation_report(...)
-    
-    print(f"\n[SUCCESS] End-to-end hybrid shoreline extraction, validation, plotting, and reporting complete for {year}.")
+    for yr in range(start_year, end_year + 1):
+        for ssn in target_seasons:
+            completed += 1
+            print(f"\n-------------------------------------------------------")
+            print(f"[RUN {completed}/{total_runs}] Processing Year: {yr} | Season: {ssn.upper()}")
+            print(f"-------------------------------------------------------")
+            
+            try:
+                metrics, buffer_dict, outliers_count, reach_stats = process_season(
+                    yr, ssn, full_ee_geom, centerline_fc, training_fc
+                )
+                summary_results.append({
+                    'year': yr,
+                    'season': ssn,
+                    'status': 'SUCCESS',
+                    'mean_error_m': metrics['mean_dist_m'],
+                    'rmse_m': metrics['rmse_dist_m'],
+                    'p95_m': metrics['p95_dist_m']
+                })
+            except Exception as e:
+                print(f"[ERROR] Error processing {yr} {ssn}: {e}")
+                summary_results.append({
+                    'year': yr,
+                    'season': ssn,
+                    'status': f'FAILED: {e}',
+                    'mean_error_m': None,
+                    'rmse_m': None,
+                    'p95_m': None
+                })
+                
+    print(f"\n=======================================================")
+    print(f"[SUMMARY] BAO CAO TONG HOP TIEN TRINH TRICH XUAT CHUOI THOI GIAN ({start_year}-{end_year})")
+    print(f"=======================================================")
+    df_summary = pd.DataFrame(summary_results)
+    print(df_summary.to_string(index=False))
+
 
 
 if __name__ == '__main__':
     main()
+

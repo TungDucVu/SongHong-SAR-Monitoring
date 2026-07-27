@@ -1,12 +1,10 @@
 # GitHub Linguist Language Overrides
 # Forces GitHub to display Python as the primary language (90%+)
 
-# Ignore all generated HTML maps and presentation slides
+# Ignore all generated HTML maps and presentation slides from Linguist language stats
 *.html linguist-generated=true
 *.html linguist-vendored=true
-*.html export-ignore
 
-# Ignore large GeoJSON datasets, JSON, and CSV outputs
 
 
 # Mark LaTeX scientific paper as documentation

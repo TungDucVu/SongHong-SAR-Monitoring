@@ -21,9 +21,12 @@ import subprocess
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(PROJECT_ROOT)
 
-def run_script(script_path):
+def run_script(script_path, extra_args=None):
     print(f"\n🚀 Khởi chạy: {script_path}...")
-    result = subprocess.run([sys.executable, script_path], cwd=PROJECT_ROOT)
+    cmd = [sys.executable, script_path]
+    if extra_args:
+        cmd.extend(extra_args)
+    result = subprocess.run(cmd, cwd=PROJECT_ROOT)
     if result.returncode != 0:
         print(f"❌ Lỗi khi thực thi: {script_path}")
         sys.exit(result.returncode)
@@ -43,6 +46,14 @@ def main():
     parser.add_argument(
         '--full-composite', action='store_true',
         help="Khởi chạy tự động trích xuất chuỗi thời gian nhiều năm (2017-2026)"
+    )
+    parser.add_argument(
+        '--start-year', type=int, default=2017,
+        help="Năm bắt đầu (mặc định: 2017)"
+    )
+    parser.add_argument(
+        '--end-year', type=int, default=2026,
+        help="Năm kết thúc (mặc định: 2026)"
     )
     
     args = parser.parse_args()
@@ -68,9 +79,18 @@ def main():
         run_script(os.path.join("scripts", "plot_hybrid_map.py"))
         
     if args.full_composite:
-        run_script(os.path.join("scripts", "extract_research_shoreline.py"))
+        run_script(
+            os.path.join("scripts", "extract_research_shoreline.py"),
+            [
+                "--start-year", str(args.start_year),
+                "--end-year", str(args.end_year),
+                "--seasons", "both",
+                "--overwrite"
+            ]
+        )
 
     print("\n✅ Hoàn thành thực thi thành công!")
 
 if __name__ == "__main__":
     main()
+

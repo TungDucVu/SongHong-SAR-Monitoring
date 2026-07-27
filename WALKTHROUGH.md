@@ -52,7 +52,14 @@ python main.py --hybrid
 
 ### 🚀 2.4 Trích Xuất Chuỗi Thời Gian 10 Năm (2017 – 2026)
 ```bash
+# Chạy mặc định trọn bộ 10 năm (2017-2026) cho cả 2 mùa (Dry & Wet)
 python main.py --full-composite
+
+# Hoặc tùy chỉnh khoảng năm trực tiếp qua script
+python scripts/extract_research_shoreline.py --start-year 2017 --end-year 2026 --seasons both --overwrite
+
+# Ghép nối đường bờ master 10 năm và tạo bản đồ tương tác tổng hợp
+python scripts/aggregate_multiyear_shoreline.py
 ```
 
 ---

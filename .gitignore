@@ -23,4 +23,4 @@ Thumbs.db
 temp_water_mask_*.tif
 scratch/
 *_backup.geojson
-*.html
+
