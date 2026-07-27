@@ -14,8 +14,9 @@ from shapely.validation import make_valid
 from shapely.geometry import shape, LineString, MultiLineString, GeometryCollection, Polygon
 from src.config import (
     CENTERLINE_GEOJSON_PATH, SHORELINE_CONFIG,
-    SHORELINE_OPEN_SIZE, SHORELINE_CLOSE_SIZE
+    SHORELINE_OPEN_SIZE, SHORELINE_CLOSE_SIZE, OUTPUT_DIR
 )
+
 
 def get_continuous_centerline(centerline_path=None, aoi_path=None):
     """
@@ -293,7 +294,10 @@ def extract_shared_boundary(water_mask_refined, centerline_fc, scale=20, year=20
     print(f"[Phase 5] Requesting GEE download URL for refined water mask at {scale}m scale...")
     
     # Try up to 5 times with exponential backoff for GEE downloads
-    temp_tif = f"temp_water_mask_{year}_{season}.tif"
+    others_dir = os.path.join(OUTPUT_DIR, "others")
+    os.makedirs(others_dir, exist_ok=True)
+    temp_tif = os.path.join(others_dir, f"temp_water_mask_{year}_{season}.tif")
+
     for attempt in range(5):
         try:
             url = water_mask_unmasked.clip(buffer_geom).getDownloadURL({

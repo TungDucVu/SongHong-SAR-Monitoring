@@ -39,8 +39,9 @@ def reorganize_outputs():
         for fname in os.listdir(others_dir):
             fpath = os.path.join(others_dir, fname)
             if os.path.isfile(fpath):
-                if fname.startswith("master") or fname.startswith("shorelines_"):
+                if fname.startswith("master") or fname.startswith("shorelines_") or fname.startswith("temp_water_mask_"):
                     continue
+
                 match = pattern.search(fname)
                 if match:
                     yr = match.group(1)
