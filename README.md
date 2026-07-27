@@ -50,24 +50,56 @@ Hệ thống thiết lập một quy trình viễn thám bán tự động trên
 
 ---
 
-## 📁 Cấu trúc Thư mục Dự án Tối ưu
+## 📈 Phân Tích Chuỗi Thời Gian & Biến Động Đường Bờ (2017 – 2026)
+
+Hệ thống đã mở rộng và trích xuất thành công trọn bộ **20 mùa (2017 – 2026, 10 năm × 2 mùa Dry & Wet)** trên toàn bộ hành lang 171.84 km Sông Hồng qua Hà Nội.
+
+### 1. Biểu Đồ Phân Tích Động Lực Học Chuỗi Thời Gian
+![Hình 1: Biến Động Diện Tích Mặt Nước Sông Hồng 2017-2026](./outputs/REPORT/figures/fig_multiyear_water_area_trend.png)
+
+* **Biến động Diện tích Mặt nước ($km^2$):** Diện tích mặt nước mùa khô duy trì ổn định từ $63.84\text{ km}^2 - 71.93\text{ km}^2$. Mùa mưa dâng rộng từ $69.19\text{ km}^2 - 84.91\text{ km}^2$. Hai đỉnh lũ cực đoan được ghi nhận vào năm **2017 ($84.91\text{ km}^2$)** và **Siêu bão Yagi Tháng 9/2024 ($79.07\text{ km}^2$)**.
+
+![Hình 2: Xu Hướng Sai Số Vị Trí Đường Bờ 2017-2026](./outputs/REPORT/figures/fig_multiyear_positional_accuracy_trend.png)
+
+* **Sai số Vị trí KD-Tree (vs. S2 NDWI):** Median P50 duy trì ổn định ở mức xuất sắc từ **$7.41\text{m} - 11.81\text{m}$** ($< 1.2\text{ pixels}$). RMSE trung bình toàn sông dao động từ **$35.58\text{m} - 56.08\text{m}$** (tiệm cận chuẩn Tốt / Regional Scale).
+
+![Hình 3: Chiều Dài Đường Bờ Vector & Cù Lao Bãi Nổi](./outputs/REPORT/figures/fig_multiyear_shoreline_length_and_islands.png)
+
+---
+
+## 🌍 Các Nhân Tố Tác Động Bên Ngoài Đến Sự Biến Thủy & Đường Bờ
+
+Diễn biến đường bờ và diện tích lòng sông Hồng giai đoạn 2017 – 2026 chịu sự chi phối mạnh mẽ của 4 nhóm tác động nhân tạo và tự nhiên:
+
+1. **Điều tiết Thủy điện & Bẫy Phù sa Thượng nguồn:**
+   - Hệ thống các hồ chứa lớn (Sơn La, Hòa Bình, Tuyên Quang, Thác Bà) giữ lại tới $70\% - 85\%$ lượng bồi tích phù sa thô, gây nên hiện tượng **"nước đói phù sa" (Clear-water erosion)**. Dòng nước trong xói mạnh vào lòng dẫn và chân đê vùng hạ lưu.
+2. **Khai Thác Cát & Hạ Thấp Lòng Dẫn Sông Hồng:**
+   - Hoạt động khai thác cát quy mô lớn kéo dài nhiều năm đã làm **hạ thấp lòng dẫn sông Hồng từ $1.5\text{m} - 3.5\text{m}$**. Hệ quả làm tụt mực nước mùa khô, ngầm hóa các bãi sỏi nông và làm gia tăng nguy cơ sạt lở chân bờ ở Reach 1 & Reach 3.
+3. **Biến Đổi Khí Hậu & Thiên Tai Cực Đoan (Lũ Lịch Sử & Siêu Bão):**
+   - Đợt lũ mở ngập lớn năm 2017 ($84.91\text{ km}^2$) và Siêu bão Yagi tháng 9/2024 ($79.07\text{ km}^2$) tạo áp lực thủy động lực học lớn, làm dịch chuyển bờ lõm khúc uốn Sơn Tây từ $15 - 35\text{m}$ và nhấn chìm tạm thời $80\%$ các cù lao bãi nổi.
+4. **Kiên Cố Hóa Đô Thị & Bờ Kè Nhân Tạo (Reach 2):**
+   - Tuyến đê và bờ kè bê tông bảo vệ nội đô Hà Nội (Reach 2) giữ vị trí bờ sông gần như cố định ($\le 10\text{m}$ dịch chuyển trong 10 năm), đẩy năng lượng dòng chảy tập trung xói bồi tự nhiên sang 2 phân đoạn nông nghiệp Reach 1 và Reach 3.
+
+---
+
+## 📁 Cấu Trúc Thư Mục Dự Án Tối Ưu
 
 ```
 SongHong-SAR-Monitoring/
 ├── main.py                             # ⚡ Bộ điều khiển CLI tập trung (Quickstart Runner)
-├── EXAMPLE.md                          # 📌 Hướng dẫn vị trí các file kết quả thử nghiệm 2024
 ├── WALKTHROUGH.md                      # 📖 Hướng dẫn vận hành & tùy biến mã nguồn chi tiết
 ├── README.md                           # 📄 Hướng dẫn tổng quan dự án
 ├── main_workflow/                      # 🚀 Kịch bản chạy mô hình theo Reach (1, 2, 3)
-├── scripts/                            # 🛠️ Script vẽ bản đồ Master & trích xuất chuỗi thời gian
+├── scripts/                            # 🛠️ Script vẽ bản đồ Master, trích xuất & vẽ biểu đồ 10 năm
 ├── src/                                # 🧩 Mã nguồn Python Core Package (collection, shoreline, v.v.)
 ├── aoi/                                # 📐 Dữ liệu không gian GeoJSON chính thức
 ├── data/                               # 💾 Cache dữ liệu ground truth Sentinel-2 MNDWI (2017-2026)
-├── docs/                               # 📚 Tài liệu tham khảo, đề cương & mô tả mô hình (model.md)
 └── outputs/                            # 📦 Kết quả đầu ra tập trung
-    ├── map/                            # 🗺️ 8 Bản đồ tương tác Folium HTML (Master Hybrid & Reach)
-    ├── REPORT/                         # 📄 Báo cáo khoa học (MD/TeX), Slides HTML & 30 Hình PNG
-    └── others/                         # 📐 GeoJSON đường bờ vector sản xuất & CSV kiểm chứng
+    ├── REPORT/                         # 📄 Báo cáo khoa học (MD/TeX), Slides HTML & Hình ảnh PNG
+    ├── {year}/                         # 📁 Thư mục từng năm (2017 đến 2026)
+    │   ├── {year}_dry/                 # 🗺️ GeoJSON, HTML QC Map, Error Map, PNG, CSV Mùa khô
+    │   └── {year}_wet/                 # 🗺️ GeoJSON, HTML QC Map, Error Map, PNG, CSV Mùa mưa
+    └── others/                         # 📐 Master GeoJSON 10 năm, Master Folium Map & Metadata
 ```
 
 ---
@@ -82,15 +114,20 @@ earthengine authenticate
 
 ### 2. Khởi chạy Mô hình Ngay lập tức
 ```bash
-# Chạy toàn bộ 3 Reach và tạo bản đồ tương tác Master Hybrid Map:
+# Chạy toàn bộ 3 Reach cho 1 năm mẫu và tạo bản đồ Master Hybrid:
 python main.py --reach all
 
-# Hoặc chạy riêng Reach 1 (Thượng lưu Sơn Tây):
-python main.py --reach 1
+# Khởi chạy tự động trích xuất chuỗi thời gian 10 năm (2017-2026):
+python main.py --full-composite
+
+# Ghép nối Master GeoJSON & Vẽ bản đồ tương tác Multi-Temporal 10 năm:
+python scripts/aggregate_multiyear_shoreline.py
+
+# Vẽ lại các biểu đồ phân tích biến động 10 năm:
+python scripts/plot_multiyear_trends.py
 ```
 
-### 3. Xem Bản Báo Cáo Phân Tích Khoa Học
-Mở bản báo cáo phân tích khoa học chi tiết kèm biểu đồ trực quan tại [outputs/REPORT/bao_cao_giam_sat_song_hong.md](./outputs/REPORT/bao_cao_giam_sat_song_hong.md) hoặc biên dịch bản LaTeX tại [outputs/REPORT/bao_cao_giam_sat_song_hong.tex](./outputs/REPORT/bao_cao_giam_sat_song_hong.tex).
+### 3. Xem Báo Cáo Phân Tích Khoa Học Chuyên Sâu
+Mở bản báo cáo phân tích khoa học chuyên sâu giải thích thuật toán, sai số và biến động 10 năm tại [outputs/REPORT/bao_cao_chuyen_sau_thuat_toan_va_bien_dong_2017_2026.md](./outputs/REPORT/bao_cao_chuyen_sau_thuat_toan_va_bien_dong_2017_2026.md).
 
----
 

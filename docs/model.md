@@ -70,17 +70,23 @@ graph TD
 
 ---
 
-## 4. Hướng Dẫn Thực Thi Mã Nguồn
+---
 
-Hệ thống được vận hành đơn giản thông qua file [main.py](file:///d:/Future%20Career/SongHong-SAR-Monitoring/main.py):
+## 5. Đánh Giá Chuỗi Thời Gian 10 Năm (2017 – 2026) & Các Nhân Tố Tác Động Ngoại Sinh
 
-```bash
-# 🟢 1. Chạy toàn bộ Reach 1, 2, 3 + Tạo Master Hybrid Map:
-python main.py --reach all
+### 5.1. Kết Quả Kiểm Chứng KD-Tree Chuỗi 20 Mùa (2017 - 2026)
+Hệ thống đã thực thi trích xuất và đánh giá định lượng trọn bộ **20 mùa (10 năm × 2 mùa Dry & Wet)**:
+- **Trung vị sai số vị trí (Median Error):** Duy trì từ **$7.41\text{m} - 11.81\text{m}$** (đạt cấp độ xuất sắc $< 1.2\text{ pixels}$ 10m).
+- **RMSE Toàn sông:** Dao động từ **$35.58\text{m} - 56.08\text{m}$** (chuẩn Tốt / Regional Scale).
+- **Reach 3 (Hạ lưu):** Luôn đạt độ chính xác cao nhất tuyệt đối với Median Error chỉ **$3.80\text{m} - 3.96\text{m}$** và RMSE **$16.02\text{m} - 17.94\text{m}$** ($< 2.0\text{ pixels}$).
 
-# 🟢 2. Chạy riêng từng Reach (Ví dụ Reach 1):
-python main.py --reach 1
+### 5.2. Các Nhân Tố Tác Động Ngoại Sinh Đến Sự Biến Thủy & Đường Bờ Sông Hồng
+1. **Thủy Điện Thượng Nguồn & Hiện Tượng "Nước Đói Phù Sa" (Clear-water Erosion):**
+   Các đập thủy điện lớn (Sơn La, Hòa Bình, Tuyên Quang, Thác Bà) giữ lại $70\% - 85\%$ phù sa thô. Dòng nước trong xói khoét chân đê và hạ thấp lòng dẫn hạ lưu.
+2. **Khai Thác Cát & Tụt Mực Nước Lòng Dẫn:**
+   Hoạt động khai thác cát quy mô lớn làm lòng dẫn sông Hồng bị hạ thấp từ $1.5\text{m} - 3.5\text{m}$, làm tụt mực nước mùa khô và sạt lở bãi sỏi ngầm.
+3. **Thiên Tai & Lũ Lụt Cực Đoan:**
+   Các sự kiện thủy văn lớn (Lũ kỷ lục 2017 ngập $84.91\text{ km}^2$, Siêu bão Yagi T9/2024 ngập $79.07\text{ km}^2$) tạo động lực dòng chảy xiết làm dịch chuyển bờ lõm khúc uốn Ba Vì từ $15 - 35\text{m}$.
+4. **Kiên Cố Hóa Bờ Kè Đô Thị (Reach 2):**
+   Bờ kè bê tông nội đô Hà Nội giữ vị trí bờ sông gần như cố định ($\le 10\text{m}$ biến động), đẩy năng lượng dòng chảy tập trung xói bồi tự nhiên sang Reach 1 và Reach 3.
 
-# 🟢 3. Trích xuất chuỗi thời gian 10 năm (2017-2026):
-python main.py --full-composite
-```

@@ -181,7 +181,24 @@ Kết quả phân tích từng Reach cho thấy **Reach 3 (Hạ lưu: Phú Xuyê
 
 ---
 
+---
+
 ## 4. PHÂN TÍCH DIỄN BIẾN KHÔNG GIAN - THỜI GIAN ĐƯỜNG BỜ & DIỆN TÍCH LÒNG SÔNG (2017 – 2026)
+
+### 4.1. Biểu Đồ Phân Tích Chuỗi Thời Gian (2017 – 2026)
+
+![Biến Động Diện Tích Mặt Nước Sông Hồng 2017-2026](./figures/fig_multiyear_water_area_trend.png)
+*Hình 1: Biến động diện tích mặt nước sông Hồng (2017 - 2026, so sánh Mùa Khô vs. Mùa Mưa).*
+
+![Xu Hướng Sai Số Vị Trí Đường Bờ 2017-2026](./figures/fig_multiyear_positional_accuracy_trend.png)
+*Hình 2: Xu hướng sai số vị trí (RMSE, Median Error) trích xuất đường bờ SAR (2017 - 2026).*
+
+![Chiều Dài Đường Bờ Vector & Cù Lao Bãi Nổi](./figures/fig_multiyear_shoreline_length_and_islands.png)
+*Hình 3: Chiều dài đường bờ vector và biến động số lượng cù lao/bãi nổi (2017 - 2026).*
+
+---
+
+### 4.2. Bảng Thống Kê Tổng Hop Chuỗi 20 Mùa (2017 – 2026)
 
 Bảng tổng hợp diện tích mặt nước lòng sông ($km^2$), tổng chiều dài đường bờ ($km$) và số lượng cù lao/bãi nổi được trích xuất tự động qua 20 mùa:
 
@@ -210,18 +227,7 @@ Bảng tổng hợp diện tích mặt nước lòng sông ($km^2$), tổng chi�
 
 ---
 
-### 4.1. Biến Động Diện Tích Mặt Nước Lòng Sông (Surface Water Area Dynamics)
-
-```mermaid
-gantt
-    title Tương Quan Diện Tích Mặt Nước Sông Hồng (2017-2026)
-    dateFormat  YYYY
-    section Đỉnh Lũ Mùa Mưa
-    Đợt Lũ Lớn 2017 (84.91 km²) :active, flood17, 2017, 1y
-    Siêu Bão Yagi 2024 (79.07 km²) :active, flood24, 2024, 1y
-    section Mùa Khô Ổn Định
-    Mùa Khô Trung Bình (63.8 - 67.1 km²) :done, dryavg, 2019, 5y
-```
+### 4.3. Biến Động Diện Tích Mặt Nước Lòng Sông (Surface Water Area Dynamics)
 
 1. **Biến thiên Giữa Hai Mùa (Dry vs. Wet Season Amplitude):**
    - Diện tích mặt nước mùa khô dao động ổn định trong khoảng **$63.84\text{ km}^2 - 71.93\text{ km}^2$**.
@@ -234,10 +240,21 @@ gantt
 
 ---
 
-### 4.2. Biến Động Chiều Dài Đường Bờ (Shoreline Vector Metrics)
-- Chiều dài đường bờ tổng cộng (bao gồm cả bờ trái, bờ phải và viền các đảo bãi giữa) duy trì trong khoảng **$235.7\text{ km} - 244.6\text{ km}$** cho toàn tuyến $171.84\text{ km}$.
-- Khi mực nước cực cao (lũ 2017), chiều dài đường bờ tăng vọt lên **$253.71\text{ km}$** do nước tràn tạo thành hàng loạt lạch nước nhỏ và nhánh phụ quanh các bãi bồi.
-- Khi mực nước mùa khô rút thấp, đường bờ được thu gọn và đơn giản hóa về khoảng **$237\text{ km} - 240\text{ km}$**.
+### 4.4. Các Nhân Tố Ngoại Sinh Tác Động Đến Diễn Biến Đường Bờ
+
+Diễn biến đường bờ và diện tích lòng sông Hồng giai đoạn 2017 – 2026 chịu sự chi phối mạnh mẽ của 4 nhóm tác động nhân tạo và tự nhiên:
+
+1. **Điều Tiết Thủy Điện Thượng Nguồn & Bẫy Phù Sa (Clear-water Erosion):**
+   - Hệ thống các hồ chứa lớn (Sơn La, Hòa Bình, Tuyên Quang, Thác Bà) giữ lại $70\% - 85\%$ bồi tích phù sa thô, gây hiện tượng **"nước đói phù sa"**. Dòng nước trong xói mạnh vào lòng dẫn và chân đê hạ lưu.
+2. **Khai Thác Cát & Hạ Thấp Lòng Dẫn Sông Hồng:**
+   - Khai thác cát quy mô lớn làm **hạ thấp lòng dẫn từ $1.5\text{m} - 3.5\text{m}$**, làm tụt mực nước mùa khô, ngầm hóa các bãi sỏi nông và gia tăng nguy cơ sạt lở chân bờ ở Reach 1 & Reach 3.
+3. **Biến Đổi Khí Hậu & Thiên Tai Cực Đoan (Siêu Bão Yagi 2024):**
+   - Đợt lũ Siêu bão Yagi (T9/2024) đẩy diện tích ngập lên **$79.07\text{ km}^2$**, tạo áp lực thủy động lực học lớn dịch chuyển đường bờ lõm Sơn Tây $15 - 35\text{m}$ và nhấn chìm $80\%$ bãi nổi.
+4. **Kiên Cố Hóa Bờ Kè Đô Thị (Reach 2 Nội Đô Hà Nội):**
+   - Tuyến bờ kè bê tông bảo vệ nội đô Hà Nội giữ đường bờ gần như cố định ($\le 10\text{m}$ biến động), đẩy năng lượng dòng chảy tập trung xói bồi tự nhiên sang 2 phân đoạn nông nghiệp Reach 1 và Reach 3.
+
+---
+
 
 ---
 
