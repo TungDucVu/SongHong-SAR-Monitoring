@@ -4,6 +4,7 @@
 # Ignore all generated HTML maps and presentation slides
 *.html linguist-generated=true
 *.html linguist-vendored=true
+*.html export-ignore
 
 # Ignore large GeoJSON datasets, JSON, and CSV outputs
 
