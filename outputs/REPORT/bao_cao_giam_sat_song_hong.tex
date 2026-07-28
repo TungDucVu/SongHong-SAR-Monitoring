@@ -344,15 +344,158 @@ Reach 3 (Hạ lưu)    & $35.80$ & $48.30$ & \textbf{+34.92\%} & $18.90$ & $5.60
     \label{fig:submergence}
 \end{figure}
 
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/sandbar_zoom_2024_dry.png}
+        \caption{Bãi bồi Mùa Khô 2024 (Chi tiết)}
+        \label{fig:sandbar_dry}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/sandbar_zoom_2024_wet.png}
+        \caption{Bãi bồi Mùa Mưa 2024 (Chi tiết)}
+        \label{fig:sandbar_wet}
+    \end{subfigure}
+    \caption{Bản đồ phóng to chi tiết vùng Bãi bồi (Sandbar) đặc trưng của Sông Hồng - So sánh trực quan Mùa Khô và Mùa Mưa năm 2024.}
+    \label{fig:sandbar_zoom}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{figures/fig1_reach_error_comparison.png}
+    \caption{Bản đồ Đánh giá Sai số Vị trí Đường bờ SAR theo Phân đoạn Sông Hồng (Mùa Khô & Mùa Mưa 2024).}
+    \label{fig:qc_map_dry}
+\end{figure}
+
+% -------------------------------------------------------------
+\section{PHÂN TÍCH ĐẶC TRƯNG MÔ HÌNH MACHINE LEARNING (FEATURE DIAGNOSTICS)}
+% -------------------------------------------------------------
+
+\subsection{Phân tích Phân bố Đặc trưng Radar theo Lớp phủ (Feature Distributions)}
+
+Các biểu đồ dưới đây phân tích phân bố thống kê các đặc trưng radar (VV, VH, GLCM) theo 4 lớp phủ mặt đất (Mặt nước, Bãi cát, Thực vật, Đô thị) để đánh giá khả năng phân tách của mô hình Random Forest.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/class_boxplots_2024_dry.png}
+        \caption{Boxplot Đặc trưng Radar - Mùa Khô 2024}
+        \label{fig:boxplot_dry}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/class_boxplots_2024_wet.png}
+        \caption{Boxplot Đặc trưng Radar - Mùa Mưa 2024}
+        \label{fig:boxplot_wet}
+    \end{subfigure}
+    \caption{Boxplot phân bố đặc trưng SAR (VV, VH, VV/VH ratio) theo 4 lớp phủ mặt đất. Lớp \textit{Mặt nước} có giá trị $\sigma^0$ thấp nhất và ít phân tán nhất, thể hiện tính tách biệt cao với các lớp phủ khác.}
+    \label{fig:boxplots}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/class_histograms_2024_dry.png}
+        \caption{Histogram Phân bố - Mùa Khô 2024}
+        \label{fig:hist_dry}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/class_histograms_2024_wet.png}
+        \caption{Histogram Phân bố - Mùa Mưa 2024}
+        \label{fig:hist_wet}
+    \end{subfigure}
+    \caption{Histogram phân bố tần suất các đặc trưng radar theo từng lớp phủ. Đỉnh phân bố tách biệt rõ giữa Mặt nước và Bãi cát là cơ sở định lượng cho ngưỡng phân loại Random Forest.}
+    \label{fig:histograms}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/class_scatter_2024_dry.png}
+        \caption{Scatter Plot VV vs VH - Mùa Khô 2024}
+        \label{fig:scatter_dry}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/class_scatter_2024_wet.png}
+        \caption{Scatter Plot VV vs VH - Mùa Mưa 2024}
+        \label{fig:scatter_wet}
+    \end{subfigure}
+    \caption{Biểu đồ phân tán VV vs VH theo lớp phủ. Các cụm lớp phủ thể hiện tính tách biệt tốt trong không gian đặc trưng 2D - đặc biệt cụm Mặt nước (thấp VV, thấp VH) vs Bãi cát (cao VV, cao VH).}
+    \label{fig:scatter}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/correlation_heatmap_2024_dry.png}
+        \caption{Ma trận Tương quan - Mùa Khô 2024}
+        \label{fig:corr_dry}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/correlation_heatmap_2024_wet.png}
+        \caption{Ma trận Tương quan - Mùa Mưa 2024}
+        \label{fig:corr_wet}
+    \end{subfigure}
+    \caption{Ma trận tương quan Pearson giữa 17 đặc trưng radar (VV, VH, GLCM texture). Các đặc trưng GLCM có tương quan thấp với đặc trưng cường độ thô, chứng tỏ tính bổ sung thông tin trong bộ đặc trưng đầu vào cho mô hình Random Forest.}
+    \label{fig:corr_heatmap}
+\end{figure}
+
+% -------------------------------------------------------------
+\section{PHÂN TÍCH CHUỖI THỜI GIAN 10 NĂM (TIMELINE ANALYSIS 2017--2026)}
+% -------------------------------------------------------------
+
+\subsection{Biến Động Diện Tích Mặt Nước Sông Hồng (2017--2026)}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/fig_multiyear_water_area_trend.png}
+    \caption{Biến động Diện tích Mặt nước Sông Hồng qua chuỗi thời gian 2017--2026 (Mùa Khô và Mùa Mưa). Đỉnh lũ đạt $84.9~\text{km}^2$ vào mùa mưa 2017 và $79.1~\text{km}^2$ vào Siêu bão Yagi tháng 9/2024.}
+    \label{fig:multiyear_water}
+\end{figure}
+
+\subsection{Xu hướng Độ chính xác Vị trí Đường bờ (2017--2026)}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/fig_multiyear_positional_accuracy_trend.png}
+    \caption{Xu hướng sai số kiểm định vị trí không gian (Mean, Median P50, RMSE, P95) qua toàn bộ 20 mùa (2017--2026). Median Error (P50) ổn định tuyệt đối trong khoảng $15.36~\text{m} - 20.89~\text{m}$ ($\approx 1.5 - 2.1$ pixels).}
+    \label{fig:multiyear_accuracy}
+\end{figure}
+
+\subsection{Chiều dài Đường bờ Vector \& Số lượng Bãi nổi / Cù lao (2017--2026)}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/fig_multiyear_shoreline_length_and_islands.png}
+    \caption{Biến động tổng chiều dài đường bờ vector và số lượng bãi cát/cồn nổi theo nhịp điệu mùa Khô -- Mưa trong giai đoạn 2017--2026. Mùa mưa làm giảm mạnh số lượng bãi nổi do ngập chìm, trong khi mùa khô lộ ra tối đa các bãi cát.}
+    \label{fig:multiyear_islands}
+\end{figure}
+
 % -------------------------------------------------------------
 \section{KẾ HOẠCH KẾ TIẾP \& KIẾN NGHỊ}
 % -------------------------------------------------------------
 
-\subsection{Kế hoạch Khởi chạy Tự động Chuỗi Thời gian (2017--2026 Timeline Phase - Hạng mục Tuần 4)}
-Sau khi hoàn thành thử nghiệm định lượng trên mẫu 2024, công đoạn chính triển khai trong Tuần 4 bao gồm:
+\subsection{Kết quả Hoàn thành Chuỗi Thời gian 10 Năm (2017--2026)}
+Hệ thống đã hoàn tất trích xuất và kiểm chứng \textbf{100\%} trọn bộ 20 mùa (2017 -- 2026) với Median Error ổn định dưới $20.89~\text{m}$ ($\approx 2$ pixels). Kết quả phân tích chuỗi thời gian xác nhận 4 nhóm hiện tượng địa mạo -- thủy văn tác động đến đường bờ:
 \begin{enumerate}
-    \item Khởi chạy tự động quy trình \textbf{Full Composite (2017--2026)} cho toàn bộ 317 cảnh ảnh Sentinel-1 SAR trên Google Earth Engine, trích xuất ảnh tổng hợp Median từng mùa của 10 năm liên tiếp.
-    \item Trích xuất chuỗi đường bờ 10 năm và tiến hành phân tích biến động hình thái theo timeline (sử dụng các chỉ số NSM, EPR và DSAS) kết nối với số liệu thủy văn xả lũ từ các hồ chứa thượng nguồn.
+    \item \textbf{"Nước đói phù sa" (Clear-water erosion):} Hệ thống hồ chứa thủy điện thượng nguồn giữ lại $70\%-85\%$ phù sa thô, gây xói sâu lòng dẫn $1.5~\text{m} - 3.0~\text{m}$ tại Hà Nội.
+    \item \textbf{Lũ cực đoan Siêu bão Yagi (T9/2024):} Diện tích ngập tràn đạt $79.07~\text{km}^2$, xói lở bờ bãi Reach 1 từ $15 - 35~\text{m}$.
+    \item \textbf{Khai thác cát sỏi:} Dịch chuyển bãi bồi về hạ lưu và sạt lở cục bộ ranh giới bờ Reach 1 \& Reach 3.
+    \item \textbf{Kiên cố hóa đô thị Reach 2:} Bờ kè bê tông giữ cố định đường bờ nội đô ($<10~\text{m}$ biến động), chuyển toàn bộ năng lượng dòng chảy sang Reach 1 \& Reach 3.
 \end{enumerate}
 
 \subsection{Kiến nghị Ứng dụng}

@@ -780,14 +780,14 @@
                     <div class="card">
                         <div class="card-title" style="color: var(--accent-blue);">Ma Trận Tương Quan 17 Đặc Trưng (Correlation Heatmap)</div>
                         <div style="text-align: center; margin-top: 10px;">
-                            <img src="./figures/feature_correlation_heatmap.png" alt="Feature Correlation Heatmap" style="width: 100%; height: 320px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-card); background: #ffffff;">
-                            <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 8px; font-weight: 600;">Đánh giá mức độ tương quan giữa VV, VH, ratios và 6 đặc trưng kết cấu GLCM (5×5).</p>
+                            <img src="./figures/correlation_heatmap_2024_dry.png" alt="Feature Correlation Heatmap" style="width: 100%; height: 320px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-card); background: #ffffff;">
+                            <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 8px; font-weight: 600;">Đánh giá mức độ tương quan giữa VV, VH, ratios và các đặc trưng kết cấu GLCM (5×5).</p>
                         </div>
                     </div>
                     <div class="card card-accent-emerald">
                         <div class="card-title" style="color: var(--accent-emerald);">Phân Bố Chỉ Số Theo Lớp Phủ (Class Boxplots)</div>
                         <div style="text-align: center; margin-top: 10px;">
-                            <img src="./figures/feature_class_boxplots.png" alt="Class Feature Boxplots" style="width: 100%; height: 320px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-card); background: #ffffff;">
+                            <img src="./figures/class_boxplots_2024_dry.png" alt="Class Feature Boxplots" style="width: 100%; height: 320px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-card); background: #ffffff;">
                             <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 8px; font-weight: 600;">Phân tách rõ rệt phản xạ radar của Nước (Water) so với Bãi cát (Sand) &amp; Thực vật (Veg).</p>
                         </div>
                     </div>
@@ -897,7 +897,32 @@
                     </div>
                     <div class="map-item-large">
                         <img src="./figures/reach3_wet.png" alt="Reach 3 Mùa Mưa 2024">
-                        <div class="map-caption">Phân Đoạn 3 - Mùa Mưa 2024 (Đường bờ trôi chảy, không có nhiễu cầu)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLIDE 9B: Sandbar Zoom & QC Map -->
+            <div class="slide">
+                <div class="slide-header">
+                    <div class="slide-tag">08B. BẢN ĐỒ CHI TIẾT BÃI BỒI &amp; QC</div>
+                    <h2 class="slide-title">Bản Đồ Phóng To Chi Tiết Bãi Bồi &amp; Kiểm Soát Chất Lượng (QC)</h2>
+                    <p class="slide-subtitle">So sánh trực quan diện tích bãi bồi nổi lộ ra trong mùa khô vs mùa mưa và bản đồ kiểm soát sai số vị trí</p>
+                </div>
+                <div class="grid-3" style="gap: 16px;">
+                    <div class="card" style="padding: 10px;">
+                        <div class="card-title" style="font-size: 0.9rem;">Bãi Bồi Mùa Khô 2024</div>
+                        <img src="./figures/sandbar_zoom_2024_dry.png" alt="Sandbar Zoom Dry" style="width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-subtle);">
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Bãi cát lộ diện tối đa, ranh giới bờ bám sát chính xác.</p>
+                    </div>
+                    <div class="card" style="padding: 10px;">
+                        <div class="card-title" style="font-size: 0.9rem;">Bãi Bồi Mùa Mưa 2024</div>
+                        <img src="./figures/sandbar_zoom_2024_wet.png" alt="Sandbar Zoom Wet" style="width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-subtle);">
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Mực nước dâng cao nhấn chìm ~70% diện tích bãi bồi.</p>
+                    </div>
+                    <div class="card card-accent-cyan" style="padding: 10px;">
+                        <div class="card-title" style="font-size: 0.9rem;">Đánh Giá Sai Số Vị Trí</div>
+                        <img src="./figures/fig1_reach_error_comparison.png" alt="QC Shoreline Map" style="width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-subtle);">
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Phân bố mức độ sai số trên 3 phân đoạn sông Hồng năm 2024.</p>
                     </div>
                 </div>
             </div>

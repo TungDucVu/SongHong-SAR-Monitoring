@@ -122,9 +122,43 @@ Phạm vi nghiên cứu (AOI) bao phủ hành lang sông Hồng dài **171.84 km
 
 ---
 
+#### 4.2.2. Bản đồ Phóng to Chi tiết Bãi bồi & Bản đồ Kiểm soát Chất lượng (QC Maps)
+
+![Sandbar Zoom Mùa Khô 2024](./figures/sandbar_zoom_2024_dry.png)
+*Hình 12a: Bản đồ phóng to chi tiết vùng Bãi bồi (Sandbar) đặc trưng - Mùa Khô năm 2024. Bãi cát lộ diện tối đa, đường bờ SAR bám sát chính xác.*
+
+![Sandbar Zoom Mùa Mưa 2024](./figures/sandbar_zoom_2024_wet.png)
+*Hình 12b: Bản đồ phóng to chi tiết vùng Bãi bồi - Mùa Mưa năm 2024. Mực nước dâng cao nhấn chìm phần lớn các bãi nổi.*
+
+![Bản đồ Đánh giá Sai số Vị trí Đường bờ SAR 2024](./figures/fig1_reach_error_comparison.png)
+*Hình 12c: Bản đồ Đánh giá Sai số Vị trí Đường bờ SAR theo Phân đoạn Sông Hồng (Mùa Khô & Mùa Mưa 2024).*
+
+---
+
 ## 5. PHÂN TÍCH CHUỖI THỜI GIAN 10 NĂM (TIMELINE ANALYSIS 2017 – 2026)
 
-### 5.1. Bảng Thống kê Sai số Vị trí Toàn bộ 20 Mùa (Full Accuracy Summary)
+### 5.1. Phân tích Đặc trưng Mô hình Machine Learning (Feature Diagnostics)
+
+Các biểu đồ phân tích phân bố thống kê đặc trưng radar theo 4 lớp phủ mặt đất (Mặt nước, Bãi cát, Thực vật, Đô thị) để đánh giá khả năng phân tách của mô hình Random Forest:
+
+![Boxplot đặc trưng radar Mùa Khô 2024](./figures/class_boxplots_2024_dry.png)
+*Hình 13a: Boxplot phân bố đặc trưng SAR (VV, VH, VV/VH ratio) theo 4 lớp phủ - Mùa Khô 2024. Lớp Mặt nước có $\sigma^0$ thấp nhất và ít phân tán nhất, tách biệt rõ với các lớp phủ còn lại.*
+
+![Boxplot đặc trưng radar Mùa Mưa 2024](./figures/class_boxplots_2024_wet.png)
+*Hình 13b: Boxplot phân bố đặc trưng SAR theo 4 lớp phủ - Mùa Mưa 2024.*
+
+![Histogram phân bố Mùa Khô 2024](./figures/class_histograms_2024_dry.png)
+*Hình 14a: Histogram phân bố tần suất đặc trưng radar theo lớp phủ - Mùa Khô 2024. Đỉnh phân bố tách biệt rõ giữa Mặt nước và Bãi cát là cơ sở định lượng ngưỡng phân loại Random Forest.*
+
+![Scatter VV vs VH Mùa Khô 2024](./figures/class_scatter_2024_dry.png)
+*Hình 15a: Biểu đồ phân tán VV vs VH theo lớp phủ - Mùa Khô 2024. Cụm Mặt nước (thấp VV, thấp VH) tách biệt tốt với cụm Bãi cát (cao VV, cao VH) trong không gian đặc trưng 2D.*
+
+![Ma trận tương quan Mùa Khô 2024](./figures/correlation_heatmap_2024_dry.png)
+*Hình 16a: Ma trận tương quan Pearson giữa 17 đặc trưng radar (VV, VH, GLCM) - Mùa Khô 2024. Đặc trưng GLCM texture có tương quan thấp với đặc trưng cường độ thô, chứng tỏ tính bổ sung thông tin trong bộ đặc trưng đầu vào.*
+
+---
+
+### 5.2. Bảng Thống kê Sai số Vị trí Toàn bộ 20 Mùa (Full Accuracy Summary)
 
 Dưới đây là bảng tổng hợp đầy đủ các chỉ số kiểm định vị trí không gian (Positional Validation Metrics) cho **toàn bộ 20 mùa** từ năm 2017 đến năm 2026 (được kiểm chứng trực tiếp với ranh giới tham chiếu quang học Sentinel-2 NDWI):
 
