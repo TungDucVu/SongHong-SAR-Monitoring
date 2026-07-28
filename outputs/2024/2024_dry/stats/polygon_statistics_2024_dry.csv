@@ -1,0 +1,16 @@
+ID,Area_ha,Perimeter_m,Intersection_Length_m,Intersects_Centerline,Selected
+poly_0,214.02,16920.0,3046.768201855423,True,True
+poly_1,77.4,8400.0,1341.111682857928,True,True
+poly_2,290.61,14940.0,4821.263649831786,True,True
+poly_3,15.84,2220.0,405.7814508599043,True,False
+poly_4,10.71,2700.0,0.0,False,False
+poly_5,340.83,26460.0,6676.625412558547,True,True
+poly_6,0.09,120.0,0.0,False,False
+poly_7,25.11,3060.0,0.0,False,False
+poly_8,15.03,3240.0,0.0,False,False
+poly_9,2694.6,138360.0,53939.92949917662,True,True
+poly_10,19.62,2160.0,797.0483772871241,True,False
+poly_11,225.9,11580.0,3751.6339313257386,True,True
+poly_12,85.59,7980.0,2661.5023286405903,True,True
+poly_13,1174.68,100560.0,24052.600180880065,True,True
+poly_14,32.58,4440.0,1720.8077450561775,True,True

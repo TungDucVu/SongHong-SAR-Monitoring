@@ -1,0 +1,2 @@
+Year,Season,Mean_Error_m,Median_Error_m,RMSE_m,P95_Error_m,Hausdorff_m,Status
+2024,WET,47.86,19.84,109.59,193.2,1301.57,SUCCESS

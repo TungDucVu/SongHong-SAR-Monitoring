@@ -46,12 +46,40 @@ def parse_stats_file(file_path):
 
 def generate_report(start_year=2017, end_year=2026):
     config_dir = os.path.join(PROJECT_ROOT, '.config')
+    outputs_dir = os.path.join(PROJECT_ROOT, 'outputs')
     records = []
     
     for yr in range(start_year, end_year + 1):
         for ssn in ['dry', 'wet']:
-            stats_path = os.path.join(config_dir, f"{yr}_{ssn}_stats.md")
-            m = parse_stats_file(stats_path)
+            csv_candidates = [
+                os.path.join(outputs_dir, str(yr), f"{yr}_{ssn}", "stats", f"validation_statistics_{yr}_{ssn}.csv"),
+                os.path.join(outputs_dir, str(yr), f"{yr}_{ssn}", f"validation_statistics_{yr}_{ssn}.csv"),
+                os.path.join(config_dir, f"{yr}_{ssn}_stats.md")
+            ]
+            
+            m = None
+            for cp in csv_candidates:
+                if os.path.exists(cp):
+                    if cp.endswith(".csv"):
+                        try:
+                            cdf = pd.read_csv(cp)
+                            if not cdf.empty:
+                                row = cdf.iloc[0]
+                                m = {
+                                    'Mean Error (m)': float(row.get('Mean_Error_m', row.get('Mean', 0.0))),
+                                    'Median Error (m)': float(row.get('Median_Error_m', row.get('Median', 0.0))),
+                                    'RMSE (m)': float(row.get('RMSE_m', row.get('RMSE', 0.0))),
+                                    'P95 Error (m)': float(row.get('P95_Error_m', row.get('P95', 0.0))),
+                                    'Hausdorff (m)': float(row.get('Hausdorff_m', row.get('Hausdorff', 0.0)))
+                                }
+                                break
+                        except Exception:
+                            pass
+                    elif cp.endswith(".md"):
+                        m = parse_stats_file(cp)
+                        if m:
+                            break
+                            
             if m:
                 records.append({
                     'Year': yr,

@@ -216,9 +216,9 @@ def generate_hard_negative_training_samples(ref_class_img, reach1_ee_geom, num_p
     
     return boundary_samples.merge(interior_samples)
 
-def run_pipeline_for_reach1(season, reach1_ee_geom, reach1_corridor_utm, centerline_fc, bridges_gdf, year=2024):
+def run_pipeline_for_reach1(season, reach1_ee_geom, reach1_corridor_utm, centerline_fc, bridges_gdf, year=2024, n_trees=50, generate_map=False):
     print(f"\n=============================================================")
-    print(f" REACH 1 LOCAL RF EXECUTION (YEAR: {year}, SEASON: {season.upper()})")
+    print(f" REACH 1 LOCAL RF EXECUTION (YEAR: {year}, SEASON: {season.upper()}, TREES: {n_trees})")
     print("=============================================================")
     
     start_time = time.time()
@@ -246,7 +246,7 @@ def run_pipeline_for_reach1(season, reach1_ee_geom, reach1_corridor_utm, centerl
         'hand', 'slope'
     ]
     
-    rf_params = {'numberOfTrees': 300, 'variablesPerSplit': 4, 'bagFraction': 0.5}
+    rf_params = {'numberOfTrees': n_trees, 'variablesPerSplit': 4, 'bagFraction': 0.5}
     classifier, _ = train_classifier(training_fc, feature_stack, feature_list, rf_params)
     
     classified, _ = classify_image(feature_stack.clip(reach1_ee_geom), classifier, feature_list)
@@ -299,28 +299,29 @@ def run_pipeline_for_reach1(season, reach1_ee_geom, reach1_corridor_utm, centerl
         
     val_stats = validate_shoreline(smoothed_gdf, s2_ref_gdf)
     
-    html_out_path = os.path.join(season_dir, f"reach1_interactive_map_{year}_{season}.html")
-    generate_reach_interactive_map(
-        extracted_gdf=smoothed_gdf,
-        s2_ref_gdf=s2_ref_gdf,
-        val_stats=val_stats,
-        reach_title="Reach 1 (Thượng lưu Ba Vì)",
-        year=year,
-        season=season,
-        output_html_path=html_out_path
-    )
-    # Also save to others/map/ for legacy support
-    legacy_map_dir = os.path.join(others_dir, "map")
-    os.makedirs(legacy_map_dir, exist_ok=True)
-    generate_reach_interactive_map(
-        extracted_gdf=smoothed_gdf,
-        s2_ref_gdf=s2_ref_gdf,
-        val_stats=val_stats,
-        reach_title="Reach 1 (Thượng lưu Ba Vì)",
-        year=year,
-        season=season,
-        output_html_path=os.path.join(legacy_map_dir, f"reach1_interactive_map_{year}_{season}.html")
-    )
+    if generate_map:
+        html_out_path = os.path.join(season_dir, f"reach1_interactive_map_{year}_{season}.html")
+        generate_reach_interactive_map(
+            extracted_gdf=smoothed_gdf,
+            s2_ref_gdf=s2_ref_gdf,
+            val_stats=val_stats,
+            reach_title="Reach 1 (Thượng lưu Ba Vì)",
+            year=year,
+            season=season,
+            output_html_path=html_out_path
+        )
+        # Also save to others/map/ for legacy support
+        legacy_map_dir = os.path.join(others_dir, "map")
+        os.makedirs(legacy_map_dir, exist_ok=True)
+        generate_reach_interactive_map(
+            extracted_gdf=smoothed_gdf,
+            s2_ref_gdf=s2_ref_gdf,
+            val_stats=val_stats,
+            reach_title="Reach 1 (Thượng lưu Ba Vì)",
+            year=year,
+            season=season,
+            output_html_path=os.path.join(legacy_map_dir, f"reach1_interactive_map_{year}_{season}.html")
+        )
     
     stats_summary = {
         'Season': season,

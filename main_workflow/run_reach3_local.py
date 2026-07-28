@@ -43,9 +43,9 @@ from src.shoreline import (
 )
 from src.collection import create_seasonal_composite
 
-def run_pipeline_for_reach3(year=2024, season='dry'):
+def run_pipeline_for_reach3(year=2024, season='dry', n_trees=50, generate_map=False):
     print(f"\n=============================================================")
-    print(f" REACH 3 LOCAL RF EXECUTION (YEAR: {year}, SEASON: {season.upper()})")
+    print(f" REACH 3 LOCAL RF EXECUTION (YEAR: {year}, SEASON: {season.upper()}, TREES: {n_trees})")
     print("=============================================================")
     
     start_time = time.time()
@@ -66,7 +66,7 @@ def run_pipeline_for_reach3(year=2024, season='dry'):
         
     composite_r3 = create_seasonal_composite(year, season, reach3_ee_geom)
     training_fc_r3 = load_training_polygons().filterBounds(reach3_ee_geom)
-    r3_best_params = {'numberOfTrees': 300, 'variablesPerSplit': 3, 'bagFraction': 0.5}
+    r3_best_params = {'numberOfTrees': n_trees, 'variablesPerSplit': 3, 'bagFraction': 0.5}
     r3_classifier, _ = train_classifier(training_fc_r3, composite_r3, GLOBAL_FEATURES, r3_best_params)
     
     classified_r3, _ = classify_image(composite_r3.clip(reach3_ee_geom), r3_classifier, GLOBAL_FEATURES)
@@ -114,27 +114,28 @@ def run_pipeline_for_reach3(year=2024, season='dry'):
         
     val_stats = validate_shoreline(smoothed_gdf, s2_ref_gdf)
     
-    html_out_path = os.path.join(season_dir, f"reach3_interactive_map_{year}_{season}.html")
-    generate_reach_interactive_map(
-        extracted_gdf=smoothed_gdf,
-        s2_ref_gdf=s2_ref_gdf,
-        val_stats=val_stats,
-        reach_title="Reach 3 (Hạ lưu Đồng bằng)",
-        year=year,
-        season=season,
-        output_html_path=html_out_path
-    )
-    legacy_map_dir = os.path.join(others_dir, "map")
-    os.makedirs(legacy_map_dir, exist_ok=True)
-    generate_reach_interactive_map(
-        extracted_gdf=smoothed_gdf,
-        s2_ref_gdf=s2_ref_gdf,
-        val_stats=val_stats,
-        reach_title="Reach 3 (Hạ lưu Đồng bằng)",
-        year=year,
-        season=season,
-        output_html_path=os.path.join(legacy_map_dir, f"reach3_interactive_map_{year}_{season}.html")
-    )
+    if generate_map:
+        html_out_path = os.path.join(season_dir, f"reach3_interactive_map_{year}_{season}.html")
+        generate_reach_interactive_map(
+            extracted_gdf=smoothed_gdf,
+            s2_ref_gdf=s2_ref_gdf,
+            val_stats=val_stats,
+            reach_title="Reach 3 (Hạ lưu Đồng bằng)",
+            year=year,
+            season=season,
+            output_html_path=html_out_path
+        )
+        legacy_map_dir = os.path.join(others_dir, "map")
+        os.makedirs(legacy_map_dir, exist_ok=True)
+        generate_reach_interactive_map(
+            extracted_gdf=smoothed_gdf,
+            s2_ref_gdf=s2_ref_gdf,
+            val_stats=val_stats,
+            reach_title="Reach 3 (Hạ lưu Đồng bằng)",
+            year=year,
+            season=season,
+            output_html_path=os.path.join(legacy_map_dir, f"reach3_interactive_map_{year}_{season}.html")
+        )
     
     stats_summary = {
         'Season': season,

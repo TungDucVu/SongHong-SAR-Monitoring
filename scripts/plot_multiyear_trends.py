@@ -62,9 +62,31 @@ def parse_all_seasonal_data(start_year=2017, end_year=2026):
                 except Exception:
                     pass
                     
-            # Parse stats
+            # Parse stats from CSV or MD
             mean_m, median_m, rmse_m, p95_m, hausdorff_m = np.nan, np.nan, np.nan, np.nan, np.nan
-            if os.path.exists(stats_file):
+            csv_candidates = [
+                os.path.join(OUTPUTS_DIR, str(yr), f"{yr}_{ssn}", "stats", f"validation_statistics_{yr}_{ssn}.csv"),
+                os.path.join(OUTPUTS_DIR, str(yr), f"{yr}_{ssn}", f"validation_statistics_{yr}_{ssn}.csv")
+            ]
+            
+            parsed = False
+            for cp in csv_candidates:
+                if os.path.exists(cp):
+                    try:
+                        cdf = pd.read_csv(cp)
+                        if not cdf.empty:
+                            row = cdf.iloc[0]
+                            mean_m = float(row.get('Mean_Error_m', row.get('Mean', np.nan)))
+                            median_m = float(row.get('Median_Error_m', row.get('Median', np.nan)))
+                            rmse_m = float(row.get('RMSE_m', row.get('RMSE', np.nan)))
+                            p95_m = float(row.get('P95_Error_m', row.get('P95', np.nan)))
+                            hausdorff_m = float(row.get('Hausdorff_m', row.get('Hausdorff', np.nan)))
+                            parsed = True
+                            break
+                    except Exception:
+                        pass
+                        
+            if not parsed and os.path.exists(stats_file):
                 with open(stats_file, 'r', encoding='utf-8') as f:
                     txt = f.read()
                     m1 = re.search(r'- \*\*Mean Error\*\*: ([\d\.]+) m', txt)

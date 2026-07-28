@@ -1,0 +1,2 @@
+Year,Season,Mean_Error_m,Median_Error_m,RMSE_m,P95_Error_m,Hausdorff_m,Status
+2026,DRY,53.39,20.2,153.91,187.2,1502.6,SUCCESS

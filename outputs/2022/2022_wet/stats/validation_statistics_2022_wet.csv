@@ -1,0 +1,2 @@
+Year,Season,Mean_Error_m,Median_Error_m,RMSE_m,P95_Error_m,Hausdorff_m,Status
+2022,WET,72.12,17.75,201.17,382.77,1611.69,SUCCESS

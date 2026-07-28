@@ -1,0 +1,54 @@
+Random Forest Classification Report - 2024 DRY
+==================================================
+
+Optimal Hyperparameters:
+  numberOfTrees: 300
+  variablesPerSplit: 3
+  bagFraction: 0.5
+
+Model Accuracy Summary (Averaged over 5 random seeds):
+  Overall Accuracy: 65.48%
+  Kappa Coefficient: 0.5237
+  Macro F1-score:    0.6993
+
+Class-Specific Metrics:
+  Water       : Precision = 89.09%, Recall = 97.10%, F1 = 0.9291
+  Sand        : Precision = 70.39%, Recall = 67.19%, F1 = 0.6875
+  Built-up    : Precision = 65.51%, Recall = 62.04%, F1 = 0.6372
+  Vegetation  : Precision = 52.72%, Recall = 56.04%, F1 = 0.5433
+
+Average Confusion Matrix (rows = true class, columns = predicted class):
+                     Water       Sand   Built-up Vegetation
+  Water               187.4        3.8        0.0        1.8
+  Sand                 18.2      336.6       39.6      106.6
+  Built-up              0.0       42.0      335.0      163.0
+  Vegetation            4.8       95.8      136.8      302.6
+
+Feature Importance Rankings:
+    1. VV_contrast     : 6.62%
+    2. VV_variance     : 6.49%
+    3. VH_contrast     : 6.41%
+    4. VH_homogeneity  : 6.39%
+    5. VV_correlation  : 6.34%
+    6. VH_variance     : 6.34%
+    7. VV_homogeneity  : 6.30%
+    8. VH_correlation  : 6.25%
+    9. VH_ASM          : 5.78%
+   10. VV_ASM          : 5.77%
+   11. VV_entropy      : 5.76%
+   12. VH_entropy      : 5.71%
+   13. VV_ratio        : 5.44%
+   14. VH              : 5.31%
+   15. VV_mean         : 5.15%
+   16. VV              : 5.06%
+   17. VV_sum          : 4.90%
+
+Post-Classification Area Statistics:
+  Water       : 9.50%
+  Sand        : 16.10%
+  Built-up    : 30.30%
+  Vegetation  : 44.10%
+
+QC Sanity Check Flags:
+  [WARNING] WARNING: Water area (9.50%) is outside expected range [15%-50%] (expected ~32%).
+  [WARNING] WARNING: Built-up area (30.30%) is outside expected range [5%-30%] (expected ~14%).

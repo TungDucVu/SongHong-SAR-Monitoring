@@ -6,7 +6,7 @@ Defines GEE project IDs, dataset settings, temporal ranges, coordinates, and loc
 import os
 
 # GEE settings
-GEE_PROJECT = 'songhong-sar-monitoring'
+GEE_PROJECT = 'songhongsarmonitoring26'
 ASSET_AOI_PATH = f'projects/{GEE_PROJECT}/assets/song_hong_aoi'
 PIPELINE_VERSION = '1.0-OptionA-Production'
 
