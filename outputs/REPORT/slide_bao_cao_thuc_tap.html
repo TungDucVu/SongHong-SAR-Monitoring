@@ -488,12 +488,14 @@
                 margin: 0;
             }
 
-            * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
+            body, html {
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+                height: 100% !important;
+                overflow: visible !important;
             }
 
-            header, footer, .progress-bar-container {
+            header, footer, .progress-bar-container, .header-controls, .nav-buttons, .dots-nav {
                 display: none !important;
             }
 
@@ -510,12 +512,13 @@
 
             .slide {
                 min-width: 100% !important;
+                width: 100vw !important;
                 height: 100vh !important;
                 page-break-after: always !important;
                 break-after: page !important;
                 opacity: 1 !important;
                 transform: none !important;
-                padding: 28px !important;
+                padding: 24px 36px !important;
                 box-sizing: border-box !important;
                 justify-content: center !important;
                 background: #ffffff !important;
