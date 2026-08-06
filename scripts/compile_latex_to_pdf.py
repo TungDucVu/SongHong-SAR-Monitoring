@@ -409,7 +409,7 @@ def parse_latex_to_html(tex_content):
 
 def main():
     browser = locate_browser()
-    report_dir = os.path.abspath("outputs/REPORT")
+    report_dir = os.path.abspath("REPORT")
     tex_file = os.path.join(report_dir, "bao_cao_giam_sat_song_hong.tex")
     html_out = os.path.join(report_dir, "bao_cao_giam_sat_song_hong_tex_styled.html")
     pdf_out = os.path.join(report_dir, "bao_cao_giam_sat_song_hong_tex.pdf")

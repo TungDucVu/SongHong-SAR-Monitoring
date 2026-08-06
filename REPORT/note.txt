@@ -1,0 +1,141 @@
+================================================================================
+TÀI LIỆU KỸ THUẬT: QUY TRÌNH TRÍCH XUẤT BỘ 17 ĐẶC TRƯNG VIỄN THÁM RADAR (SENTINEL-1 SAR)
+Dự án: Giám sát đường bờ và bãi bồi sông Hồng bằng dữ liệu Sentinel-1 SAR (2017 - 2026)
+Đơn vị: Trung tâm Vũ trụ Việt Nam (VNSC)
+================================================================================
+
+1. TỔNG QUAN BỘ 17 ĐẶC TRƯNG (17-DIMENSIONAL FEATURE STACK)
+--------------------------------------------------------------------------------
+Bộ 17 đặc trưng được xây dựng từ ảnh vệ tinh Radar khẩu độ tổng hợp Sentinel-1 SAR (băng C, tần số 5.405 GHz, chế độ IW GRD, phân giải không gian 10m x 10m).
+
+Bộ đặc trưng kết hợp 2 nhóm chính:
+  - Nhóm 1: 5 Kênh cường độ & tỷ số tán xạ ngược thô (Intensity & Ratio Channels).
+  - Nhóm 2: 12 Đặc trưng kết cấu Ma trận đồng xuất hiện mức xám (GLCM Texture Features) trên cả 2 kênh phân cực VV và VH.
+
+--------------------------------------------------------------------------------
+2. CHI TIẾT DANH MỤC 17 ĐẶC TRƯNG
+--------------------------------------------------------------------------------
+
+[NHÓM I: 5 KÊNH CƯỜNG ĐỘ & TỶ SỐ RADAR]
+1. VV (dB): Cường độ tán xạ ngược phân cực dọc-dọc (Co-polarization).
+   - Cơ sở vật lý: Bề mặt nước phẳng lặng tán xạ như gương (specular reflection), tín hiệu dội đi xa không quay về vệ tinh làm sigma0_VV rất thấp (-20dB đến -25dB). Bãi cát thô và đê kè có tán xạ ngược cao (-10dB đến -5dB).
+
+2. VH (dB): Cường độ tán xạ ngược phân cực ngang-dọc (Cross-polarization).
+   - Cơ sở vật lý: Cực kỳ nhạy với tán xạ giải thể (depolarization) từ thảm thực vật ven bờ và độ gồ ghề bề mặt bãi cát thô.
+
+3. VV_ratio (dB): Tỷ số phân cực VV / VH (trong thang dB là VV - VH).
+   - Cơ sở vật lý: Triệt tiêu các biến thiên chiếu sáng địa hình cục bộ, làm nổi bật sự khác biệt giữa mặt nước phẳng lặng với bãi cát và thực vật.
+
+4. VV_sum (dB): Tổng cường độ phân cực VV + VH.
+   - Cơ sở vật lý: Tăng cường tổng năng lượng phản xạ ngược thu nhận được từ bề mặt địa hình.
+
+5. VV_mean: Giá trị trung bình trượt không gian của kênh VV (Spatial Moving Average).
+   - Phương pháp: Lọc phẳng lọc mịn cục bộ để giảm nhiễu đốm trước khi đưa vào phân loại diện rộng.
+
+[NHÓM II: 6 ĐẶC TRƯNG GLCM TEXTURE TRÊN KÊNH VV (Cửa sổ trượt 5x5 pixel)]
+6.  VV_contrast     : Độ tương phản cục bộ mức xám VV. Nhận diện ranh giới sắc nét giữa đê kè bê tông và mặt nước.
+7.  VV_entropy      : Độ hỗn loạn ngẫu nhiên mức xám VV. Bãi cát thô và đô thị có entropy cao; mặt nước đồng nhất có entropy thấp.
+8.  VV_homogeneity  : Độ đồng nhất cục bộ (Inverse Difference Moment). Mặt nước có độ đồng nhất tiệm cận 1.0.
+9.  VV_correlation  : Độ tương quan kết cấu theo không gian chiều ngang và dọc.
+10. VV_ASM          : Momen sóng nhọn / Năng lượng đồng nhất (Angular Second Moment). Mặt nước phẳng có ASM rất cao.
+11. VV_variance     : Phương sai kết cấu cục bộ trong cửa sổ 5x5 (50m x 50m).
+
+[NHÓM III: 6 ĐẶC TRƯNG GLCM TEXTURE TRÊN KÊNH VH (Cửa sổ trượt 5x5 pixel)]
+12. VH_contrast     : Độ tương phản kết cấu kênh phân cực chéo VH.
+13. VH_entropy      : Độ hỗn loạn kết cấu VH. Cực kỳ hiệu quả trong bóc tách thảm thực vật rậm rạp ven bờ.
+14. VH_homogeneity  : Độ đồng nhất kết cấu kênh VH.
+15. VH_correlation  : Độ tương quan kết cấu kênh VH.
+16. VH_ASM          : Độ đồng nhất năng lượng kết cấu kênh VH.
+17. VH_variance     : Phương sai kết cấu kênh VH.
+
+--------------------------------------------------------------------------------
+3. THÔNG SỐ KỸ THUẬT QUY TRÌNH TRÍCH XUẤT (PROCESSING PIPELINE)
+--------------------------------------------------------------------------------
+- Nguồn ảnh: Sentinel-1 IW GRD, Descending Orbit.
+- Tiền xử lý SAR chuẩn mực:
+  + Remove GRD Border Noise.
+  + Apply Orbit File (Precise Orbit Ephemeris).
+  + Radiometric Calibration (Tính toán giá trị σ⁰ ở thang decibel dB).
+  + Lọc đốm thích ứng Refined Lee (Kernel size 7x7) giúp triệt tiêu nhiễu speckle mà bảo toàn ranh giới đường bờ.
+- Tính toán GLCM trên Google Earth Engine (GEE):
+  + Chuyển đổi kênh VV, VH về dạng mảng số nguyên 32 mức xám (Gray-level quantization: 32 levels).
+  + Tính toán GLCM bằng hàm `.glcmTexture(size=5)` với cửa sổ kết cấu 5x5 pixel (tương đương 50m x 50m).
+  + Trung bình hóa chỉ số kết cấu trên 4 hướng không gian (0°, 45°, 90°, 135°) để đảm bảo tính bất biến hướng (Rotation Invariance).
+- Đóng gói Image Array:
+  + Gộp 17 băng ảnh thành một Image Array 17 chiều (`ee.Image.cat(...)`).
+  + Đưa vào mô hình Random Forest Local (`ee.Classifier.smileRandomForest(numberOfTrees=100)`) huấn luyện riêng cho từng phân đoạn (Reach 1, Reach 2, Reach 3).
+
+--------------------------------------------------------------------------------
+4. Ý NGHĨA KHOA HỌC CỦA BỘ 17 ĐẶC TRƯNG
+--------------------------------------------------------------------------------
+- Loại bỏ phụ thuộc đơn thuần vào cường độ thô: Phản xạ thô VV/VH dễ bị nhiễu bởi hiện tượng phản xạ kép (Double-bounce) từ các tòa nhà nội đô Hà Nội và kè bê tông.
+- Bổ sung thông tin kết cấu không gian: 12 kênh GLCM cung cấp bức tranh về độ thô mịn, tính hỗn loạn và độ tương phản không gian xung quanh điểm ảnh.
+- Kết quả kiểm chứng Correlation Heatmap: Cho thấy nhóm kênh GLCM Texture có hệ số tương quan thấp với kênh cường độ thô, cung cấp thông tin độc lập giúp Random Forest đạt độ chính xác cận pixel (P50 = 6.16m ở Reach 3 hạ lưu).
+
+--------------------------------------------------------------------------------
+5. PHƯƠNG PHÁP LẤY MẪU (SAMPLING METHODOLOGY)
+--------------------------------------------------------------------------------
+Quy trình lấy mẫu của dự án được thực hiện qua 2 giai đoạn độc lập:
+
+[GIAI ĐOẠN 1: LẤY MẪU HUẤN LUYỆN MÔ HÌNH RANDOM FOREST]
+- 4 Lớp địa hình lấy mẫu:
+  1. Water (Mặt nước lòng sông)
+  2. Sand (Bãi cát thô / Bãi bồi nổi)
+  3. Vegetation (Thảm thực vật ven bờ / Nông nghiệp)
+  4. Urban / Built-up (Công trình đô thị, nhà cửa, đê kè bê tông)
+- Phương pháp chọn mẫu: Stratified Random Sampling (Lấy mẫu ngẫu nhiên phân tầng) kết hợp giải đoán thủ công trên ảnh vệ tinh siêu cao độ phân giải PlanetScope 3m / Google Earth làm ảnh chuẩn.
+- Quy mô mẫu: 2,000 - 3,000 điểm mẫu polygon đại diện cho từng Reach.
+- Tỷ lệ phân chia: 70% dành cho Tập huấn luyện (Training Set) và 30% dành cho Tập kiểm định nội bộ (Testing Set).
+
+[GIAI ĐOẠN 2: LẤY MẪU KIỂM ĐỊNH SAI SỐ KHÔNG GIAN ĐƯỜNG BỜ (THUẬT TOÁN KD-TREE)]
+- Lưới lấy mẫu siêu dày đặc: Dải đều các điểm mẫu theo khoảng cách 10m/mẫu (tương ứng độ phân giải 1 pixel của ảnh Sentinel-1) dải liên tục dọc theo trọn bộ 171.84 km đường bờ.
+- Quy mô mẫu kiểm định: > 50,000 điểm mẫu không gian/mùa cho toàn bộ tuyến sông Hồng.
+- Cơ chế đo sai số vị trí bằng KD-Tree:
+  + Xây dựng chỉ mục cây không gian 2D (KD-Tree) trên tập điểm đường bờ tham chiếu Ground Truth (trích xuất từ ảnh quang học Sentinel-2 NDWI chụp cùng mốc thời gian).
+  + Với mỗi điểm mẫu đường bờ SAR P_SAR(x_i, y_i), thuật toán truy vấn trong thời gian O(log N) để tìm điểm tiệm cận nhất P_Opt(x_j, y_j) trên bờ quang học Sentinel-2 NDWI.
+- Đánh giá chỉ số: Tính toán Median Error (P50 - chỉ số chính trơ với ngoại lệ), Mean Error, RMSE (độ nhạy ngoại lệ cực đoan) và Tỷ lệ trùng khớp trong các vùng đệm 10m, 20m, 50m, 100m.
+
+--------------------------------------------------------------------------------
+6. THUẬT TOÁN XÁC ĐỊNH MÉP NƯỚC, BẢN ĐỒ XÁC SUẤT & CHỈ SỐ HÓA KHẢ NĂNG NGẬP
+--------------------------------------------------------------------------------
+
+[I. THUẬT TOÁN XÁC ĐỊNH MÉP NƯỚC & ĐÁNH DẤU LÒNG SÔNG]
+1. Trích xuất mặt nước (Water Binary Masking):
+   - Sử dụng 3 mô hình Local Random Forest phân loại 17 đặc trưng thu được mảng pixel nhị phân: 1 (Water) và 0 (Non-Water).
+   - Áp dụng các toán tử hình thái học Morphological Opening/Closing (kernel size 3x3) để loại bỏ nhiễu đốm nhỏ và lấp các lỗ rỗng cục bộ trong polygon nước.
+2. Trích xuất đường ranh giới mép nước (Shoreline Vectorization):
+   - Chuyển đổi mảng pixel mặt nước thành đối tượng Vector Polygon (`ee.Image.reduceToVectors` hoặc OpenCV `findContours`).
+   - Sử dụng thuật toán trích xuất đường ranh giới Canny Edge / Polyline Extractor để thu được đường LineString mép nước.
+3. Thuật toán xử lý gầm cầu (Centerline Bridge Connector):
+   - Đứt gãy gầm cầu là nhiễu bóng radar tự nhiên dưới 6 cây cầu lớn ở Reach 2.
+   - Giải pháp: Tạo vạch đệm đâm xuyên (Buffer Piercing Capsule) bám theo tim sông (Centerline Connector), nối liền 100% polygon mặt nước qua bóng cầu mà không làm méo ranh giới kè tự nhiên.
+4. Đánh dấu Lòng sông & Mép nước mở rộng đỉnh lũ:
+   - Lòng sông thường trực (Dry-season Permanent Channel): Ranh giới mặt nước ngập duy trì liên tục trong tất cả các mùa khô (mực nước thấp nhất).
+   - Mép nước mở rộng đỉnh lũ (Maximum Flood Inundation Extent): Mép nước vút lên đỉnh lũ cực đại (ví dụ: đỉnh lũ cực đoan năm 2017 đạt 84.91 km² và đợt lũ Siêu bão Yagi tháng 9/2024 đạt 79.07 km²).
+
+[II. PHÂN TÍCH XÁC SUẤT BỊ NGẬP NƯỚC (WATER INUNDATION FREQUENCY - WIF)]
+- Công thức tính Tần suất/Xác suất Ngập nước WIF trên trọn bộ 317 cảnh ảnh Sentinel-1 SAR (2017–2026):
+      WIF(x,y) = (Sum(t=1..N) I_water(x,y,t) / N) * 100%
+  với N = 317 cảnh ảnh (20 mùa), I_water(x,y,t) = 1 nếu ô (x,y) tại mốc t là nước, ngược lại = 0.
+- Phân cấp Xác suất Ngập:
+  + 90% - 100% : Lòng sông chính thường trực (Permanent Riverbed).
+  + 50% - 90%  : Vùng ngập theo mùa (Seasonal Inundation / Bãi cát nổi ngập lộ nhịp nhàng).
+  + 10% - 50%  : Vùng ngập lũ cao (High-Flood Risk Zone).
+  + < 10%      : Vùng rủi ro ngập cực đoan / Siêu bão Yagi (Extreme Inundation Extent).
+
+[III. CHỈ SỐ HÓA KHẢ NĂNG NGẬP NƯỚC (INUNDATION RISK INDEX - IRI)]
+- Đánh giá chỉ số hóa nguy cơ ngập lụt ven sông kết hợp đa chỉ số:
+      IRI(x,y) = w1 * WIF_norm + w2 * (1 - DEM_norm) + w3 * (1 - Dist_norm)
+  Trong đó:
+    + WIF_norm  : Tần suất ngập nước chuẩn hóa từ 317 cảnh ảnh SAR.
+    + DEM_norm  : Độ cao địa hình chuẩn hóa từ dữ liệu DEM 30m (NASADEM/Copernicus DEM). KTS càng thấp nguy cơ ngập càng cao.
+    + Dist_norm : Khoảng cách chuẩn hóa từ vị trí xét tới tim sông chính. Càng gần tim sông nguy cơ ngập càng cao.
+    + Trọng số khuyến nghị: w1 = 0.50 (tần suất SAR thực tế), w2 = 0.35 (địa hình DEM), w3 = 0.15 (khoảng cách sông).
+
+[IV. XUẤT BẢN ĐỒ XÁC SUẤT NGẬP NƯỚC (WATER INUNDATION PROBABILITY MAP)]
+- Bản đồ trực quan hóa sắc độ (Color Gradient Visualization):
+  + Xanh lam đậm (Dark Blue - #0284c7): Lòng sông ngập thường trực (WIF 90-100%).
+  + Xanh ngọc (Cyan - #06b6d4): Vùng ngập bán phần/bãi nổi mùa khô (WIF 50-90%).
+  + Vàng rơm (Yellow - #eab308): Vùng ngập lũ định kỳ (WIF 20-50%).
+  + Đỏ da cam (Orange/Red - #ef4444): Vùng ven sông ngập cực đoan khi Siêu bão Yagi / xả lũ thủy điện (WIF < 20%).
+================================================================================

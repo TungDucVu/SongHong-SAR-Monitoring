@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Báo Cáo Thực Tập - Giám Sát Sông Hồng Bằng Sentinel-1 SAR</title>
+  <!-- Google Fonts hỗ trợ tiếng Việt đầy đủ -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Lexend:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap&subset=vietnamese" rel="stylesheet">
+  <!-- MathJax for rendering any math notation -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    :root {
+      --bg-body: #f8fafc;
+      --bg-card: #ffffff;
+      --accent-blue: #0284c7;
+      --accent-cyan: #0284c7;
+      --accent-emerald: #059669;
+      --accent-amber: #d97706;
+      --accent-purple: #7c3aed;
+      --accent-red: #dc2626;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --border-card: #cbd5e1;
+      --border-subtle: #e2e8f0;
+      --font-head: 'Lexend', 'Be Vietnam Pro', sans-serif;
+      --font-body: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Header & Navbar */
+    header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 28px;
+      background: #ffffff;
+      border-bottom: 2px solid var(--border-card);
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      background: var(--accent-blue);
+      color: #ffffff;
+      font-family: var(--font-head);
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+    }
+
+    .header-title {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      background: #ffffff;
+      color: var(--text-main);
+      border: 2px solid var(--border-card);
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: #f1f5f9;
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+    }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: #0369a1;
+      border-color: #0369a1;
+      color: #ffffff;
+    }
+
+    /* Top Progress Bar */
+    .progress-bar-container {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: #e2e8f0;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent-blue);
+      transition: width 0.3s ease;
+    }
+
+    /* Slide Viewport */
+    main {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .slides-container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.4s ease-out;
+    }
+
+    .slide {
+      min-width: 100vw;
+      height: 100%;
+      padding: 36px 6%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      opacity: 0.2;
+      transform: scale(0.97);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      overflow-y: auto;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Slide Typography */
+    .slide-header {
+      margin-bottom: 24px;
+    }
+
+    .slide-tag {
+      display: inline-block;
+      font-family: var(--font-code);
+      font-size: 0.85rem;
+      color: var(--accent-blue);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    .slide-title {
+      font-family: var(--font-head);
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.25;
+    }
+
+    .slide-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+      font-weight: 500;
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+    }
+
+    /* Card Elements */
+    .card {
+      background: var(--bg-card);
+      border: 2px solid var(--border-card);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+      transition: border-color 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: var(--accent-blue);
+    }
+
+    .card-accent-emerald {
+      border-top: 5px solid var(--accent-emerald);
+    }
+
+    .card-accent-cyan {
+      border-top: 5px solid var(--accent-blue);
+    }
+
+    .card-accent-amber {
+      border-top: 5px solid var(--accent-amber);
+    }
+
+    .card-accent-purple {
+      border-top: 5px solid var(--accent-purple);
+    }
+
+    .card-title {
+      font-family: var(--font-head);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 12px;
+    }
+
+    .card-body {
+      font-size: 0.98rem;
+      color: #334155;
+      line-height: 1.6;
+      font-weight: 500;
+    }
+
+    .card-body ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    .card-body li {
+      position: relative;
+      padding-left: 20px;
+      margin-bottom: 10px;
+    }
+
+    .card-body li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--accent-blue);
+      font-size: 1.3rem;
+      line-height: 1;
+      font-weight: bold;
+    }
+
+    /* Big Stat Boxes */
+    .stat-box {
+      text-align: center;
+      padding: 20px;
+      background: #ffffff;
+      border-radius: 12px;
+      border: 2px solid var(--border-card);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    }
+
+    .stat-number {
+      font-family: var(--font-head);
+      font-size: 2.6rem;
+      font-weight: 800;
+      color: var(--accent-blue);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    /* Large Map Pair Layout */
+    .map-pair-large {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      background: #ffffff;
+      padding: 18px;
+      border-radius: 14px;
+      border: 2px solid var(--border-card);
+    }
+
+    .map-item-large {
+      text-align: center;
+    }
+
+    .map-item-large img {
+      width: 100%;
+      height: 380px;
+      object-fit: contain;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid var(--border-card);
+    }
+
+    .map-caption {
+      font-size: 0.95rem;
+      color: #0f172a;
+      margin-top: 10px;
+      font-weight: 700;
+    }
+
+    /* Flow Diagram */
+    .flow-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .flow-step {
+      flex: 1;
+      background: #ffffff;
+      border: 2px solid var(--border-card);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .flow-step-num {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 10px auto;
+    }
+
+    .flow-arrow {
+      color: var(--accent-blue);
+      font-size: 1.5rem;
+      font-weight: 800;
+    }
+
+    /* Bottom Controls Bar */
+    footer {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 28px;
+      background: #ffffff;
+      border-top: 2px solid var(--border-card);
+    }
+
+    .dots-nav {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .dot.active {
+      width: 30px;
+      border-radius: 6px;
+      background: var(--accent-blue);
+    }
+
+    .slide-counter {
+      font-family: var(--font-code);
+      font-size: 0.95rem;
+      color: #0f172a;
+      font-weight: 700;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* Cover Slide Specific */
+    .cover-content {
+      max-width: 920px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .cover-badge {
+      display: inline-block;
+      background: #e0f2fe;
+      border: 2px solid var(--accent-blue);
+      color: var(--accent-blue);
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      margin-bottom: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .cover-title {
+      font-family: var(--font-head);
+      font-size: 2.8rem;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 20px;
+      color: #0f172a;
+    }
+
+    .cover-meta {
+      display: flex;
+      justify-content: center;
+      gap: 36px;
+      margin-top: 36px;
+      padding-top: 24px;
+      border-top: 2px solid var(--border-subtle);
+    }
+
+    .meta-item {
+      text-align: left;
+    }
+
+    .meta-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+
+    .meta-val {
+      font-size: 1.05rem;
+      font-weight: 800;
+    /* FULLSCREEN PRESENTATION STYLES */
+    /* Hide top header entirely in fullscreen */
+    :fullscreen header,
+    :-webkit-full-screen header,
+    :-moz-full-screen header,
+    body.fullscreen-mode header {
+      display: none !important;
+    }
+
+    /* In bottom footer: hide dots nav and nav buttons, keep ONLY slide counter */
+    :fullscreen footer .dots-nav,
+    :fullscreen footer .nav-buttons,
+    :-webkit-full-screen footer .dots-nav,
+    :-webkit-full-screen footer .nav-buttons,
+    :-moz-full-screen footer .dots-nav,
+    :-moz-full-screen footer .nav-buttons,
+    body.fullscreen-mode footer .dots-nav,
+    body.fullscreen-mode footer .nav-buttons {
+      display: none !important;
+    }
+
+    :fullscreen footer,
+    :-webkit-full-screen footer,
+    :-moz-full-screen footer,
+    body.fullscreen-mode footer {
+      background: transparent !important;
+      border-top: none !important;
+      padding: 12px 24px !important;
+      justify-content: flex-end !important;
+      position: absolute !important;
+      bottom: 0 !important;
+      right: 0 !important;
+      z-index: 100 !important;
+      pointer-events: none !important;
+    }
+
+    :fullscreen .slide-counter,
+    :-webkit-full-screen .slide-counter,
+    :-moz-full-screen .slide-counter,
+    body.fullscreen-mode .slide-counter {
+      background: rgba(15, 23, 42, 0.75) !important;
+      color: #ffffff !important;
+      padding: 6px 14px !important;
+      border-radius: 20px !important;
+      font-size: 0.85rem !important;
+      letter-spacing: 0.5px !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    :fullscreen main,
+    :-webkit-full-screen main,
+    :-moz-full-screen main,
+    body.fullscreen-mode main {
+      height: 100vh !important;
+      width: 100vw !important;
+    }
+
+    :fullscreen .slide,
+    :-webkit-full-screen .slide,
+    :-moz-full-screen .slide,
+    body.fullscreen-mode .slide {
+      padding: 24px 5% 44px 5% !important;
+    }
+
+    /* PRINT STYLESHEET FOR PDF EXPORT */
+    @media print {
+      @page {
+        size: A4 landscape;
+        margin: 0;
+      }
+
+      body, html {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        height: 100% !important;
+        overflow: visible !important;
+      }
+
+      header, footer, .progress-bar-container, .header-controls, .nav-buttons, .dots-nav {
+        display: none !important;
+      }
+
+      main {
+        overflow: visible !important;
+        height: auto !important;
+      }
+
+      .slides-container {
+        display: block !important;
+        transform: none !important;
+        height: auto !important;
+      }
+
+      .slide {
+        min-width: 100% !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        opacity: 1 !important;
+        transform: none !important;
+        padding: 24px 36px !important;
+        box-sizing: border-box !important;
+        justify-content: center !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+      }
+
+      .card {
+        background: #ffffff !important;
+        border: 2px solid #cbd5e1 !important;
+        color: #0f172a !important;
+        box-shadow: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo-area">
+      <div class="logo-badge">VNSC</div>
+      <div class="header-title">BÁO CÁO THỰC TẬP - SENTINEL-1 SAR SÔNG HỒNG</div>
+    </div>
+    <div class="header-controls">
+      <button class="btn btn-primary" onclick="toggleFullscreen()" title="Toàn màn hình">
+        Fullscreen
+      </button>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" id="progressBar"></div>
+    </div>
+  </header>
+
+  <!-- Slide Viewport -->
+  <main>
+    <div class="slides-container" id="slidesContainer">
+
+      <!-- SLIDE 1: Cover -->
+      <div class="slide active">
+        <div class="cover-content">
+          <div class="cover-badge">BÁO CÁO KẾT QUẢ THỰC TẬP VIỄN THÁM RADAR</div>
+          <h1 class="cover-title">GIÁM SÁT BIẾN ĐỘNG ĐƯỜNG BỜ VÀ BÃI BỒI SÔNG HỒNG BẰNG DỮ LIỆU SENTINEL-1 SAR</h1>
+          <p class="slide-subtitle" style="font-size: 1.15rem; color: #475569; font-weight: 600;">Ứng dụng Quy trình Phân loại Random Forest &amp; Thuật toán Nối bờ qua cầu loại bỏ nhiễu trên Google Earth Engine</p>
+          
+          <div class="cover-meta">
+            <div class="meta-item">
+              <div class="meta-label">Người thực hiện</div>
+              <div class="meta-val">Vũ Đức Tùng</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Đơn vị thực tập</div>
+              <div class="meta-val">Trung tâm Vũ trụ Việt Nam (VNSC)</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Thời gian thực hiện</div>
+              <div class="meta-val">Tháng 07/2026</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Phạm vi dữ liệu</div>
+              <div class="meta-val">317 Cảnh ảnh SAR (2017 – 2026)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 2: Internship Outline & Timeline -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">01. KẾ HOẠCH THỰC TẬP</div>
+          <h2 class="slide-title">Đề Cương &amp; Lộ Trình Công Việc 4 Tuần</h2>
+          <p class="slide-subtitle">Phân bổ mục tiêu khoa học và sản phẩm hoàn thành theo từng tuần thực tập</p>
+        </div>
+        <div class="grid-4">
+          <div class="card card-accent-cyan">
+            <div class="card-title">Tuần 1: Dữ liệu &amp; AOI</div>
+            <div class="card-body">
+              <ul>
+                <li>Thiết lập môi trường Google Earth Engine.</li>
+                <li>Xác định AOI 171.84 km sông Hồng qua Hà Nội.</li>
+                <li>Lọc 317 cảnh ảnh Sentinel-1 Descending.</li>
+                <li>Tiền xử lý &amp; lọc đốm Refined Lee 7x7.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card card-accent-emerald">
+            <div class="card-title">Tuần 2: Machine Learning</div>
+            <div class="card-body">
+              <ul>
+                <li>Trích xuất 17 đặc trưng Radar &amp; GLCM Texture.</li>
+                <li>Tạo mẫu huấn luyện 4 lớp phủ địa hình.</li>
+                <li>Huấn luyện Random Forest cho 3 Reach.</li>
+                <li>Phát triển thuật toán loại bỏ nhiễu cầu.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card card-accent-amber">
+            <div class="card-title">Tuần 3: Validation 2024</div>
+            <div class="card-body">
+              <ul>
+                <li>Lấy mẫu đường bờ SAR độ phân giải 10m.</li>
+                <li>Kiểm chứng KD-Tree với Sentinel-2 NDWI.</li>
+                <li>Tính toán sai số Median (16.59m) &amp; RMSE.</li>
+                <li>Đánh giá tỷ lệ trùng khớp vùng đệm.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card card-accent-purple">
+            <div class="card-title">Tuần 4: Chuỗi Thời Gian &amp; Báo Cáo</div>
+            <div class="card-body">
+              <ul>
+                <li>Chạy full composite 317 cảnh ảnh SAR (2017 – 2026) để phân tích biến động theo timeline.</li>
+                <li>Phân tích động lực học diện tích bãi bồi &amp; mặt nước.</li>
+                <li>Biện luận tác động thủy văn &amp; công trình thủy điện.</li>
+                <li>Hoàn thiện báo cáo (MD/LaTeX) &amp; Slide HTML.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3: Problem Rationale & SAR Advantage -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">02. TÍNH CẤP THIẾT &amp; GIẢI PHÁP</div>
+          <h2 class="slide-title">Tại Sao Cần Viễn Thám Radar (SAR) Cho Sông Hồng?</h2>
+          <p class="slide-subtitle">So sánh ưu thế công nghệ Radar khẩu độ tổng hợp Sentinel-1 so với quan trắc truyền thống và ảnh quang học</p>
+        </div>
+        <div class="grid-2">
+          <div class="card" style="border-top: 5px solid var(--accent-red);">
+            <div class="card-title" style="color: var(--accent-red);">Thách Thức Của Phương Pháp Khác</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>Đo đạc địa hình trực tiếp:</strong> Tốn chi phí, tốn thời gian, khó triển khai liên tục trên 171.84 km hành lang sông Hồng.</li>
+                <li><strong>Ảnh Quang Học (Sentinel-2, Landsat):</strong> Bị che phủ bởi mây dày đặc trong suốt mùa mưa bão (tháng 5 - 10) tại miền Bắc Việt Nam, tạo khoảng trống dữ liệu lớn.</li>
+                <li><strong>Thủy văn sông Hồng biến động cực mạnh:</strong> Dao động chênh lệch mực nước mùa mưa vs mùa khô lên tới hàng mét, làm ngập/lộ bãi cát liên tục.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card card-accent-cyan">
+            <div class="card-title" style="color: var(--accent-blue);">Ưu Thế SAR &amp; Kết Hợp Tham Chiếu Quang Học</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>Xuyên mây &amp; Hoạt động 24/7:</strong> Băng C (tần số 5.405 GHz) đâm xuyên mây, mù, sương, quan trắc bất kể ngày đêm.</li>
+                <li><strong>Cực kỳ nhạy với bề mặt nước:</strong> Nước phẳng tán xạ như gương (giá trị phản xạ radar σ⁰ rất thấp), bãi bồi/thực vật tán xạ ngược mạnh (σ⁰ cao).</li>
+                <li><strong>Kết hợp Sentinel-2 NDWI làm Tham Chiếu:</strong> Sử dụng ảnh quang học Sentinel-2 làm dữ liệu Ground Truth chuẩn mực để kiểm định &amp; đánh giá độ chính xác không gian cho mô hình SAR.</li>
+                <li><strong>Tần suất chụp cao:</strong> Đạt trung bình 31 cảnh/năm (~12-14 cảnh/tháng) đáp ứng hoàn hảo bài toán chuỗi thời gian.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4: Study Area & River Reaches -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">03. PHẠM VI NGHIÊN CỨU</div>
+          <h2 class="slide-title">Khu Vực Nghiên Cứu &amp; Phân Đoạn Sông Hồng (171.84 km)</h2>
+          <p class="slide-subtitle">Phân chia hành lang 362.83 km² thành 3 Phân đoạn (Reach) có đặc thù địa lý và đô thị hóa khác nhau</p>
+        </div>
+        <div class="grid-3">
+          <div class="card card-accent-cyan">
+            <div class="card-title">Reach 1 (Thượng Lưu)</div>
+            <div class="card-body">
+              <p style="color: var(--accent-blue); font-weight: 700; margin-bottom: 8px;">Sơn Tây • Ba Vì • Phúc Thọ (57.28 km)</p>
+              <ul>
+                <li>Lòng sông rất rộng, cấu trúc phân nhánh phức tạp.</li>
+                <li>Bãi nổi lớn (bãi Giữa, bãi Cam) biến động mạnh theo xả lũ thủy điện.</li>
+                <li>Chịu ảnh hưởng nhiễu địa hình đồi núi lân cận.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card card-accent-amber">
+            <div class="card-title">Reach 2 (Trung Lưu)</div>
+            <div class="card-body">
+              <p style="color: var(--accent-amber); font-weight: 700; margin-bottom: 8px;">Nội Đô Hà Nội (57.28 km)</p>
+              <ul>
+                <li>Tốc độ đô thị hóa cao, đường bờ được đê kè bê tông kiên cố.</li>
+                <li>Hiện diện 6 cầu lớn (Nhật Tân, Thăng Long, Long Biên, Vĩnh Tuy...).</li>
+                <li>Nhiễu tán xạ góc vuông (double-bounce) từ chân cầu.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card card-accent-emerald">
+            <div class="card-title">Reach 3 (Hạ Lưu)</div>
+            <div class="card-body">
+              <p style="color: var(--accent-emerald); font-weight: 700; margin-bottom: 8px;">Thường Tín • Phú Xuyên (57.28 km)</p>
+              <ul>
+                <li>Đồng bằng nông nghiệp meander nhẹ, độ dốc dòng chảy thấp.</li>
+                <li>Bờ sông ít công trình lớn, độ ổn định đường bờ rất cao.</li>
+                <li>Đạt độ chính xác trích xuất lý tưởng nhất (&lt; 1 pixel).</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5: Methodology Framework -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">04. PHƯƠNG PHÁP NGHIÊN CỨU</div>
+          <h2 class="slide-title">Khung Quy Trình Viễn Thám &amp; Đột Phá Kỹ Thuật</h2>
+          <p class="slide-subtitle">Quy trình bán tự động xử lý ảnh SAR, trích xuất đặc trưng và nối bờ qua cầu</p>
+        </div>
+        <div class="flow-container">
+          <div class="flow-step">
+            <div class="flow-step-num">1</div>
+            <strong style="color: #0f172a; font-size: 0.95rem; font-weight: 800;">Sentinel-1 SAR</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; font-weight: 600;">317 Descending Scenes</p>
+          </div>
+          <div class="flow-arrow">➔</div>
+          <div class="flow-step">
+            <div class="flow-step-num">2</div>
+            <strong style="color: #0f172a; font-size: 0.95rem; font-weight: 800;">Refined Lee 7x7</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; font-weight: 600;">Lọc đốm bảo toàn biên</p>
+          </div>
+          <div class="flow-arrow">➔</div>
+          <div class="flow-step">
+            <div class="flow-step-num">3</div>
+            <strong style="color: #0f172a; font-size: 0.95rem; font-weight: 800;">17 GLCM Features</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; font-weight: 600;">VV, VH, Ratio, Texture</p>
+          </div>
+          <div class="flow-arrow">➔</div>
+          <div class="flow-step">
+            <div class="flow-step-num">4</div>
+            <strong style="color: #0f172a; font-size: 0.95rem; font-weight: 800;">Random Forest</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; font-weight: 600;">Phân loại 3 Reaches</p>
+          </div>
+          <div class="flow-arrow">➔</div>
+          <div class="flow-step">
+            <div class="flow-step-num">5</div>
+            <strong style="color: #0f172a; font-size: 0.95rem; font-weight: 800;">Bridge Exclusion</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; font-weight: 600;">Centerline Connector</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card card-accent-cyan">
+            <div class="card-title">Bộ 17 Đặc Trưng Đầu Vào Cho Mô Hình Random Forest</div>
+            <div class="card-body" style="font-size: 0.88rem;">
+              <ul style="padding-left: 0;">
+                <li><strong>5 Kênh Cường Độ &amp; Tỷ Số Radar:</strong> <code>VV</code>, <code>VH</code>, <code>VV_ratio</code> (VV/VH), <code>VV_sum</code> (VV+VH), <code>VV_mean</code>.</li>
+                <li><strong>6 Đặc Trưng GLCM Texture Kênh VV:</strong> <code>VV_contrast</code>, <code>VV_entropy</code>, <code>VV_homogeneity</code>, <code>VV_correlation</code>, <code>VV_ASM</code>, <code>VV_variance</code>.</li>
+                <li><strong>6 Đặc Trưng GLCM Texture Kênh VH:</strong> <code>VH_contrast</code>, <code>VH_entropy</code>, <code>VH_homogeneity</code>, <code>VH_correlation</code>, <code>VH_ASM</code>, <code>VH_variance</code>.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card card-accent-emerald">
+            <div class="card-title">Thuật Toán Thu Hẹp Bóng Cầu (Bridge Exclusion)</div>
+            <div class="card-body">
+              Giải quyết triệt để sự cố bóng đứt gãy radar dưới gầm 6 cây cầu lớn tại Hà Nội. Tạo capsule đệm kết nối lòng sông dựa trên đường tim sông (Centerline Connector), loại bỏ hoàn toàn hiện tượng đường bờ cuộn xoắn chạy dọc thân cầu.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5B: Phase 2 Feature Engineering Graphs -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">04B. PHÂN TÍCH ĐẶC TRƯNG PHASE 2</div>
+          <h2 class="slide-title">Đồ Thị Phân Tích Bộ 17 Đặc Trưng Radar &amp; Kết Cấu GLCM</h2>
+          <p class="slide-subtitle">Ma trận tương quan và phân bố chỉ số đặc trưng phân biệt rõ rệt lớp mặt nước vs bãi cát/thực vật</p>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title" style="color: var(--accent-blue);">Ma Trận Tương Quan 17 Đặc Trưng (Correlation Heatmap)</div>
+            <div style="text-align: center; margin-top: 10px;">
+              <img src="./figures/correlation_heatmap_2024_dry.png" alt="Feature Correlation Heatmap" style="width: 100%; height: 320px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-card); background: #ffffff;">
+              <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 8px; font-weight: 600;">Đánh giá mức độ tương quan giữa VV, VH, ratios và các đặc trưng kết cấu GLCM (5×5).</p>
+            </div>
+          </div>
+          <div class="card card-accent-emerald">
+            <div class="card-title" style="color: var(--accent-emerald);">Phân Bố Chỉ Số Theo Lớp Phủ (Class Boxplots)</div>
+            <div style="text-align: center; margin-top: 10px;">
+              <img src="./figures/class_boxplots_2024_dry.png" alt="Class Feature Boxplots" style="width: 100%; height: 320px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-card); background: #ffffff;">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5B2: Comparison of 3 Local Random Forest Models -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">04B2. SO SÁNH MÔ HÌNH RANDOM FOREST THEO PHÂN ĐOẠN</div>
+          <h2 class="slide-title">So Sánh 3 Mô Hình Random Forest Local &amp; Lý Do Phân Đoạn</h2>
+          <p class="slide-subtitle">Sự khác biệt về đặc trưng vật lý mặt phủ đòi hỏi bộ trọng số đặc trưng riêng cho từng Reach</p>
+        </div>
+        <div class="grid-3" style="margin-bottom: 16px;">
+          <div class="card card-accent-cyan">
+            <div class="card-title" style="color: var(--accent-blue);">Reach 1: Thượng Lưu (Sơn Tây)</div>
+            <div class="card-body" style="font-size: 0.88rem;">
+              <p style="color: var(--accent-blue); font-weight: 700; margin-bottom: 6px;">Bãi nổi &amp; Lòng sông rộng</p>
+              <ul>
+                <li><strong>Đặc thù:</strong> Bãi cát thô lớn, dòng chảy đan xen, nhiễu đồi núi.</li>
+                <li><strong>Top Features:</strong> <code>VV_ratio</code>, <code>VV_sum</code>, <code>VV_mean</code>.</li>
+                <li><strong>Nhiệm vụ RF:</strong> Phân biệt mặt nước phẳng với bãi cát thô hạt lớn có tán xạ ngược mạnh.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card card-accent-amber">
+            <div class="card-title" style="color: var(--accent-amber);">Reach 2: Trung Lưu (Nội Đô)</div>
+            <div class="card-body" style="font-size: 0.88rem;">
+              <p style="color: var(--accent-amber); font-weight: 700; margin-bottom: 6px;">Đô thị &amp; Kè bê tông đứng</p>
+              <ul>
+                <li><strong>Đặc thù:</strong> Nhà cao tầng, kè cứng, 6 cây cầu gây nhiễu Double-bounce.</li>
+                <li><strong>Top Features:</strong> <code>VV_entropy</code>, <code>VH_entropy</code>, <code>VV_contrast</code>.</li>
+                <li><strong>Nhiệm vụ RF:</strong> Khai thác GLCM Texture để bóc tách nhiễu nhân tạo/chân cầu ra khỏi polygon nước.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card card-accent-emerald">
+            <div class="card-title" style="color: var(--accent-emerald);">Reach 3: Hạ Lưu (Thường Tín)</div>
+            <div class="card-body" style="font-size: 0.88rem;">
+              <p style="color: var(--accent-emerald); font-weight: 700; margin-bottom: 6px;">Đồng bằng Nông nghiệp Meander</p>
+              <ul>
+                <li><strong>Đặc thù:</strong> Bờ sông mượt, cây bụi/đất canh tác, đường bờ rất ổn định.</li>
+                <li><strong>Top Features:</strong> <code>VV</code>, <code>VH</code>, <code>VV_homogeneity</code>.</li>
+                <li><strong>Nhiệm vụ RF:</strong> Phản xạ thuần khiết, ranh giới rõ nét, đạt độ chính xác cao nhất (Median P50 = 6.16m).</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="border-left: 5px solid var(--accent-purple); background: #fdf4ff;">
+          <div class="card-title" style="color: var(--accent-purple); font-size: 1.02rem;"> Tại Sao Phải Sử Dụng 3 Mô Hình Local RF Thay Vì 1 Mô Hình Chung?</div>
+          <div class="card-body" style="font-size: 0.88rem; color: #4c1d95;">
+            <ul style="margin: 0; padding-left: 18px;">
+              <li><strong>Khác biệt vật lý viễn thám:</strong> Mỗi phân đoạn có cơ chế tán xạ ngược (scattering mechanism) hoàn toàn khác nhau. Một mô hình chung sẽ làm méo trọng số phân loại.</li>
+              <li><strong>Tránh lây lan nhiễu (Noise Isolation):</strong> Cô lập nhiễu phản xạ kép đô thị ở Reach 2 không làm giảm độ chính xác trích xuất bãi cát tự nhiên ở Reach 1 và đồng bằng Reach 3.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4C: Literature Comparison (Domestic & International) -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">04C. SO SÁNH NGHIÊN CỨU TRONG &amp; NGOÀI NƯỚC</div>
+          <h2 class="slide-title">Đối Chiếu Bài Báo Khoa Học Cùng Khu Vực Sông Hồng</h2>
+          <p class="slide-subtitle">So sánh phương pháp luận và độ chính xác với các công trình công bố trong nước và quốc tế</p>
+        </div>
+        <div class="slide-body">
+          <div class="grid-2" style="gap: 16px;">
+            <div class="card card-accent-cyan" style="padding: 16px;">
+              <div class="card-title" style="color: var(--accent-blue);">Nghiên Cứu Quốc Tế (International Literature)</div>
+              <div class="card-body" style="font-size: 0.86rem;">
+                <ul>
+                  <li><strong>Pham-Duc et al. (2022, STOTEN):</strong> Dùng S1 SAR + Landsat-8. Bị gián đoạn dữ liệu mùa mưa do mây che (&gt;70%), chưa loại nhiễu cầu và gập ảnh đô thị (Median Error ≈ 22.1 m).</li>
+                  <li><strong>Binh et al. (2020, ISPRS):</strong> Thuật toán Otsu đơn trên S1 SAR. Bị nhiễu đốm làm răng cưa bờ, sai số ranh giới thực vật cao (25.4 m).</li>
+                  <li><strong>Nguyen et al. (2020, Catena):</strong> Quang học Landsat (30 m). Độ phân giải quá thô, bỏ sót bãi nổi nhỏ.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-accent-emerald" style="padding: 16px;">
+              <div class="card-title" style="color: var(--accent-emerald);">Nghiên Cứu Trong Nước &amp; Đột Phá Dự Án</div>
+              <div class="card-body" style="font-size: 0.86rem;">
+                <ul>
+                  <li><strong>Trần Anh Phương et al. (2021, Tạp chí Đo đạc &amp; Bản đồ):</strong> Dùng Sentinel-2 NDWI. Chỉ quan trắc được mùa khô trời quang; mất hẳn 6 tháng mùa mưa.</li>
+                  <li><strong>Lê Văn Trung et al. (2019, Tạp chí KH Trái đất):</strong> Giải đoán thủ công trên Landsat-8/VNREDSat-1. Tốn nhân công, thiếu liên tục tự động hóa.</li>
+                  <li><strong>Đột phá Nghiên cứu Này:</strong> S1 SAR + 17 GLCM + Local RF + Bridge Connector. Quan trắc 100% 20 mùa (2017–2026), <strong>Median Error 15.36 m – 20.89 m (Reach 3: 6.16 m)</strong>.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6: Comprehensive 3-Reach Validation Benchmark 2024 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">05. KẾT QUẢ KIỂM ĐỊNH MẪU 2024</div>
+          <h2 class="slide-title">Đánh Giá Định Lượng Độ Chính Xác Vị Trí Cho Cả 3 Phân Đoạn</h2>
+          <p class="slide-subtitle">Kết quả đối chiếu vị trí đường bờ Sentinel-1 SAR với Sentinel-2 NDWI (Thuật toán KD-Tree)</p>
+        </div>
+        
+        <div class="card card-accent-cyan" style="margin-bottom: 16px; padding: 16px;">
+          <div class="card-title" style="font-size: 1.05rem; color: var(--accent-blue);">Bảng Thống Kê Sai Số Vị Trí Chi Tiết Cho 3 Phân Đoạn Sông (Reach 1, 2, 3)</div>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.85rem; text-align: center;">
+            <thead>
+              <tr style="background: #e0f2fe; color: #0369a1; border-bottom: 2px solid var(--border-card);">
+                <th style="padding: 6px; text-align: left;">Chỉ Số Kiểm Định (KD-Tree)</th>
+                <th style="padding: 6px;" colspan="2">Reach 1 (Thượng Lưu)</th>
+                <th style="padding: 6px;" colspan="2">Reach 2 (Trung Lưu)</th>
+                <th style="padding: 6px; background: #dcfce7; color: #15803d;" colspan="2">Reach 3 (Hạ Lưu - Chuẩn Pixel)</th>
+              </tr>
+              <tr style="border-bottom: 1.5px solid var(--border-card); font-size: 0.8rem; background: #f8fafc;">
+                <th style="padding: 4px; text-align: left; color: var(--text-muted);">Mùa Giám Sát</th>
+                <th style="padding: 4px; color: var(--accent-amber);">Khô</th>
+                <th style="padding: 4px; color: var(--accent-blue);">Mưa</th>
+                <th style="padding: 4px; color: var(--accent-amber);">Khô</th>
+                <th style="padding: 4px; color: var(--accent-blue);">Mưa</th>
+                <th style="padding: 4px; color: var(--accent-amber); background: #f0fdf4;">Khô</th>
+                <th style="padding: 4px; color: var(--accent-blue); background: #f0fdf4;">Mưa</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid var(--border-subtle);">
+                <td style="padding: 6px; text-align: left; font-weight: 700;">Trung vị sai số (Median / P50)</td>
+                <td style="padding: 6px; font-weight: 800;">17.73 m</td>
+                <td style="padding: 6px;">16.44 m</td>
+                <td style="padding: 6px; font-weight: 800;">12.52 m</td>
+                <td style="padding: 6px;">19.99 m</td>
+                <td style="padding: 6px; font-weight: 800; color: #15803d; background: #f0fdf4;">10.03 m</td>
+                <td style="padding: 6px; font-weight: 800; color: #15803d; background: #f0fdf4;">11.90 m</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border-subtle);">
+                <td style="padding: 6px; text-align: left; font-weight: 700;">Sai số trung bình (Mean Error)</td>
+                <td style="padding: 6px;">80.15 m</td>
+                <td style="padding: 6px;">34.27 m</td>
+                <td style="padding: 6px;">22.79 m</td>
+                <td style="padding: 6px;">31.98 m</td>
+                <td style="padding: 6px; font-weight: 700; color: #15803d; background: #f0fdf4;">13.01 m</td>
+                <td style="padding: 6px; font-weight: 700; color: #15803d; background: #f0fdf4;">20.13 m</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border-subtle);">
+                <td style="padding: 6px; text-align: left; font-weight: 700;">Sai số RMSE</td>
+                <td style="padding: 6px;">178.87 m</td>
+                <td style="padding: 6px;">63.22 m</td>
+                <td style="padding: 6px;">37.58 m</td>
+                <td style="padding: 6px;">52.79 m</td>
+                <td style="padding: 6px; font-weight: 700; color: #15803d; background: #f0fdf4;">18.30 m</td>
+                <td style="padding: 6px; font-weight: 700; color: #15803d; background: #f0fdf4;">31.59 m</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; text-align: left; font-weight: 700;">Phân vị P95 Error</td>
+                <td style="padding: 6px;">440.97 m</td>
+                <td style="padding: 6px;">135.33 m</td>
+                <td style="padding: 6px;">90.96 m</td>
+                <td style="padding: 6px;">116.91 m</td>
+                <td style="padding: 6px; font-weight: 700; color: #15803d; background: #f0fdf4;">35.41 m</td>
+                <td style="padding: 6px; font-weight: 700; color: #15803d; background: #f0fdf4;">61.22 m</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid-3" style="gap: 16px;">
+          <div class="card card-accent-emerald" style="padding: 14px;">
+            <div class="card-title" style="font-size: 0.95rem; color: var(--accent-emerald);">1. Độ Chính Xác Cận Pixel Tại Reach 3</div>
+            <div class="card-body" style="font-size: 0.84rem;">
+              Reach 3 đạt sai số trung vị <strong>10.03 m</strong> (đúng 1 pixel) và RMSE chỉ 18.30 m. Đường bờ meander mượt mà, ranh giới rõ nét, đạt độ tin cậy hình học lý tưởng nhất.
+            </div>
+          </div>
+          <div class="card card-accent-cyan" style="padding: 14px;">
+            <div class="card-title" style="font-size: 0.95rem; color: var(--accent-blue);">2. Kháng Nhiễu Đô Thị Tốt Tại Reach 2</div>
+            <div class="card-body" style="font-size: 0.84rem;">
+              Reach 2 đạt Median P50 = <strong>12.52 m</strong> nhờ thuật toán Centerline Connector nối liền polygon dưới gầm 6 cầu và GLCM Texture loại bỏ phản xạ kép từ nhà cao tầng.
+            </div>
+          </div>
+          <div class="card card-accent-purple" style="padding: 14px;">
+            <div class="card-title" style="font-size: 0.95rem; color: var(--accent-purple);">3. Tỷ Lệ Bao Phủ Vùng Đệm Cao</div>
+            <div class="card-body" style="font-size: 0.84rem;">
+              Tỷ lệ trùng khớp trong vùng đệm ≤ 50m đạt <strong>&gt;86%</strong> và vùng đệm ≤ 100m đạt <strong>97.10%</strong> toàn bộ 171.84 km sông Hồng, khẳng định tính khả thi của quy trình SAR.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6B: Spatial Error Variations & 3 Validation Charts -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">05B. PHÂN TÍCH BIẾN ĐỘNG KHÔNG GIANG VÀ SAI SỐ</div>
+          <h2 class="slide-title">Biến Động Không Gian &amp; Đồ Thị Kiểm Soát Sai Số Kiểm Định</h2>
+          <p class="slide-subtitle">Phân tích trực quan 3 biểu đồ kiểm định sai số vị trí không gian và hàm tích lũy CDF</p>
+        </div>
+        <div class="grid-3" style="gap: 16px;">
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div class="card-title" style="font-size: 0.92rem; color: var(--accent-blue);">1. So Sánh Sai Số Theo 3 Reach</div>
+            <img src="./figures/fig1_reach_error_comparison.png" alt="Reach Error Comparison" style="width: 100%; height: 260px; object-fit: contain; border-radius: 6px; border: 1px solid var(--border-subtle); margin-top: 6px; background: #ffffff;">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; font-weight: 600;">Reach 3 có phân bố sai số hẹp nhất; Reach 1 chịu tác động của bãi cát động làm dâng RMSE.</p>
+          </div>
+          <div class="card card-accent-emerald" style="padding: 12px; text-align: center;">
+            <div class="card-title" style="font-size: 0.92rem; color: var(--accent-emerald);">2. Hàm Tích Lũy Sai Số CDF (P50 &amp; P95)</div>
+            <img src="./figures/fig4_error_cdf_percentiles.png" alt="Error CDF Percentiles" style="width: 100%; height: 260px; object-fit: contain; border-radius: 6px; border: 1px solid var(--border-subtle); margin-top: 6px; background: #ffffff;">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; font-weight: 600;">75% đường bờ có sai số &lt; 25m; Median P50 đạt 16.59m; P95 khống chế ngoại lệ tốt.</p>
+          </div>
+          <div class="card card-accent-amber" style="padding: 12px; text-align: center;">
+            <div class="card-title" style="font-size: 0.92rem; color: var(--accent-amber);">3. Đường Cong Độ Chính Xác Vùng Đệm</div>
+            <img src="./figures/fig2_buffer_accuracy_curve.png" alt="Buffer Accuracy Curve" style="width: 100%; height: 260px; object-fit: contain; border-radius: 6px; border: 1px solid var(--border-subtle); margin-top: 6px; background: #ffffff;">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; font-weight: 600;">Tỷ lệ trùng khớp vút lên &gt;86% ở đệm 50m và đạt 97.10% ở đệm 100m trên toàn hành lang.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 7: Reach 1 Map Large -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">06. BẢN ĐỒ PHÂN ĐOẠN 1 (REACH 1)</div>
+          <h2 class="slide-title">Bản Đồ Phân Đoạn 1: Thượng Lưu (Sơn Tây • Ba Vì • Phúc Thọ)</h2>
+          <p class="slide-subtitle">So sánh bản đồ trích xuất đường bờ Sentinel-1 SAR và bãi bồi giữa Mùa Khô và Mùa Mưa năm 2024</p>
+        </div>
+        <div class="map-pair-large">
+          <div class="map-item-large">
+            <img src="./figures/reach1_dry.png" alt="Reach 1 Mùa Khô 2024">
+            <div class="map-caption">Phân Đoạn 1 - Mùa Khô 2024 (Lòng sông rộng, bãi nổi bồi lấp lớn)</div>
+          </div>
+          <div class="map-item-large">
+            <img src="./figures/reach1_wet.png" alt="Reach 1 Mùa Mưa 2024">
+            <div class="map-caption">Phân Đoạn 1 - Mùa Mưa 2024 (Mực nước dâng cao ngập phần lớn bãi cát)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 8: Reach 2 Map Large -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">07. BẢN ĐỒ PHÂN ĐOẠN 2 (REACH 2)</div>
+          <h2 class="slide-title">Bản Đồ Phân Đoạn 2: Trung Lưu Nội Đô Hà Nội (Nhật Tân đến Thanh Trì)</h2>
+          <p class="slide-subtitle">Bản đồ đường bờ khu vực đê kè bê tông nội đô và áp dụng thuật toán thu hẹp nhiễu bóng 6 cây cầu lớn</p>
+        </div>
+        <div class="map-pair-large">
+          <div class="map-item-large">
+            <img src="./figures/reach2_dry.png" alt="Reach 2 Mùa Khô 2024">
+            <div class="map-caption">Phân Đoạn 2 - Mùa Khô 2024 (Lộ rõ bãi giữa Nhật Tân và kè nội đô)</div>
+          </div>
+          <div class="map-item-large">
+            <img src="./figures/reach2_wet.png" alt="Reach 2 Mùa Mưa 2024">
+            <div class="map-caption">Phân Đoạn 2 - Mùa Mưa 2024 (Mực nước ngập sát chân đê kè kiên cố)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 9: Reach 3 Map Large -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">08. BẢN ĐỒ PHÂN ĐOẠN 3 (REACH 3)</div>
+          <h2 class="slide-title">Bản Đồ Phân Đoạn 3: Hạ Lưu Đồng Bằng (Thường Tín • Phú Xuyên)</h2>
+          <p class="slide-subtitle">Phân đoạn meander nông nghiệp đạt độ chính xác trích xuất lý tưởng nhất (&lt; 1 pixel: 6.16 m)</p>
+        </div>
+        <div class="map-pair-large">
+          <div class="map-item-large">
+            <img src="./figures/reach3_dry.png" alt="Reach 3 Mùa Khô 2024">
+            <div class="map-caption">Phân Đoạn 3 - Mùa Khô 2024 (Đường bờ ổn định, sai số lý tưởng 6.16 m)</div>
+          </div>
+          <div class="map-item-large">
+            <img src="./figures/reach3_wet.png" alt="Reach 3 Mùa Mưa 2024">
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 9B: Sandbar Zoom & QC Map -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">08B. BẢN ĐỒ CHI TIẾT BÃI BỒI &amp; QC</div>
+          <h2 class="slide-title">Bản Đồ Phóng To Chi Tiết Bãi Bồi &amp; Kiểm Soát Chất Lượng (QC)</h2>
+          <p class="slide-subtitle">So sánh trực quan diện tích bãi bồi nổi lộ ra trong mùa khô vs mùa mưa và bản đồ kiểm soát sai số vị trí</p>
+        </div>
+        <div class="grid-3" style="gap: 16px;">
+          <div class="card" style="padding: 10px;">
+            <div class="card-title" style="font-size: 0.9rem;">Bãi Bồi Mùa Khô 2024</div>
+            <img src="./figures/sandbar_zoom_2024_dry.png" alt="Sandbar Zoom Dry" style="width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-subtle);">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Bãi cát lộ diện tối đa, ranh giới bờ bám sát chính xác.</p>
+          </div>
+          <div class="card" style="padding: 10px;">
+            <div class="card-title" style="font-size: 0.9rem;">Bãi Bồi Mùa Mưa 2024</div>
+            <img src="./figures/sandbar_zoom_2024_wet.png" alt="Sandbar Zoom Wet" style="width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-subtle);">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Mực nước dâng cao nhấn chìm ~70% diện tích bãi bồi.</p>
+          </div>
+          <div class="card card-accent-cyan" style="padding: 10px;">
+            <div class="card-title" style="font-size: 0.9rem;">Đánh Giá Sai Số Vị Trí</div>
+            <img src="./figures/fig1_reach_error_comparison.png" alt="QC Shoreline Map" style="width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-subtle);">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Phân bố mức độ sai số trên 3 phân đoạn sông Hồng năm 2024.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 10: Hydrological Dynamics & Sandbar Areas -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">09. ĐỘNG LỰC HỌC THỦY VĂN</div>
+          <h2 class="slide-title">Biến Động Diện Tích Mặt Nước &amp; Bãi Bồi Theo Mùa</h2>
+          <p class="slide-subtitle">Thống kê sự dịch chuyển diện tích mặt nước và mức độ suy giảm bãi cát trong thử nghiệm mẫu năm 2024</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="card card-accent-cyan">
+            <div class="card-title">Tăng Trưởng Mặt Nước Mùa Mưa (+38.49%)</div>
+            <div class="card-body">
+              <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem;">
+                <tr style="border-bottom: 2px solid var(--border-card); color: var(--text-muted);">
+                  <th style="text-align: left; padding: 8px;">Phân Đoạn</th>
+                  <th style="padding: 8px;">Nước Khô (km²)</th>
+                  <th style="padding: 8px;">Nước Mưa (km²)</th>
+                  <th style="padding: 8px; color: var(--accent-blue);">Tăng (%)</th>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-subtle);">
+                  <td style="padding: 10px 8px;">Reach 1 (Thượng lưu)</td>
+                  <td style="text-align: center;">38.50</td>
+                  <td style="text-align: center;">54.20</td>
+                  <td style="text-align: center; color: var(--accent-blue); font-weight: bold;">+40.78%</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-subtle);">
+                  <td style="padding: 10px 8px;">Reach 2 (Trung lưu)</td>
+                  <td style="text-align: center;">42.10</td>
+                  <td style="text-align: center;">58.70</td>
+                  <td style="text-align: center; color: var(--accent-blue); font-weight: bold;">+39.43%</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 8px;">Reach 3 (Hạ lưu)</td>
+                  <td style="text-align: center;">35.80</td>
+                  <td style="text-align: center;">48.30</td>
+                  <td style="text-align: center; color: var(--accent-blue); font-weight: bold;">+34.92%</td>
+                </tr>
+              </table>
+              <p style="margin-top: 14px; font-size: 0.92rem; color: var(--text-muted); font-weight: 600;">Tổng diện tích mặt nước mở rộng thêm <strong>44.80 km²</strong> trong mùa lũ năm 2024.</p>
+            </div>
+          </div>
+
+          <div class="card card-accent-amber">
+            <div class="card-title">Mức Độ Ngập Bãi Bồi Mùa Mưa (-69.60%)</div>
+            <div class="card-body">
+              <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem;">
+                <tr style="border-bottom: 2px solid var(--border-card); color: var(--text-muted);">
+                  <th style="text-align: left; padding: 8px;">Phân Đoạn</th>
+                  <th style="padding: 8px;">Bãi Khô (km²)</th>
+                  <th style="padding: 8px;">Bãi Mưa (km²)</th>
+                  <th style="padding: 8px; color: var(--accent-amber);">Giảm (%)</th>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-subtle);">
+                  <td style="padding: 10px 8px;">Reach 1 (Thượng lưu)</td>
+                  <td style="text-align: center;">28.40</td>
+                  <td style="text-align: center;">9.10</td>
+                  <td style="text-align: center; color: var(--accent-amber); font-weight: bold;">-67.96%</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-subtle);">
+                  <td style="padding: 10px 8px;">Reach 2 (Trung lưu)</td>
+                  <td style="text-align: center;">15.20</td>
+                  <td style="text-align: center;">4.30</td>
+                  <td style="text-align: center; color: var(--accent-amber); font-weight: bold;">-71.71%</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 8px;">Reach 3 (Hạ lưu)</td>
+                  <td style="text-align: center;">18.90</td>
+                  <td style="text-align: center;">5.60</td>
+                  <td style="text-align: center; color: var(--accent-amber); font-weight: bold;">-70.37%</td>
+                </tr>
+              </table>
+              <p style="margin-top: 14px; font-size: 0.92rem; color: var(--text-muted); font-weight: 600;">Khoảng <strong>70% diện tích bãi bồi</strong> nổi trong mùa khô bị ngập chìm dưới dòng nước mùa lũ.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 11: 10-Year Automation Plan & Recommendations -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-tag">10. TỰ ĐỘNG HÓA &amp; KHUYẾN NGHỊ</div>
+          <h2 class="slide-title">Kế Hoạch Khởi Chạy Chuỗi 10 Năm (2017–2026) &amp; Ứng Dụng</h2>
+          <p class="slide-subtitle">Sẵn sàng mở rộng pipeline tự động trên GEE cho toàn bộ 317 cảnh ảnh Sentinel-1 SAR</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="card card-accent-purple">
+            <div class="card-title">Triển Khai Tự Động Chuỗi 10 Năm (GEE Timeline)</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>Chạy Batch Pipeline:</strong> Xử lý tự động 317 cảnh ảnh Sentinel-1 SAR từ 2017 đến 2026 trên Google Earth Engine.</li>
+                <li><strong>Phân tích DSAS (Digital Shoreline Analysis System):</strong> Tính toán các chỉ số di chuyển đường bờ tích lũy NSM (Net Shoreline Movement) và tốc độ dịch chuyển EPR (End Point Rate).</li>
+                <li><strong>Đối chiếu thủy văn xả lũ:</strong> Kết nối chuỗi số liệu xả lũ hồ chứa Hòa Bình, Sơn La với nhịp biến động bãi bồi 10 năm.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="card card-accent-emerald">
+            <div class="card-title">Khuyến Nghị Ứng Dụng Thực Tế</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>Cảnh báo sớm xói lở đê điều:</strong> Phát hiện các bồi tụ mới làm hẹp lòng dẫn và chuyển hướng dòng chảy.</li>
+                <li><strong>Hỗ trợ giám sát cát:</strong> Theo dõi sự thu hẹp bãi bồi bất thường hỗ trợ kiểm tra khai thác cát trái phép.</li>
+                <li><strong>Quy hoạch đô thị ven sông:</strong> Cung cấp bản đồ bãi nổi ổn định 10 năm làm cơ sở cho Đề án Quy hoạch Phân khu Đô thị Sông Hồng.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 11A: 10-Year Time Series Analysis & Figures -->
+      <div class="slide">
+        <div class="slide-header">
+          <div>
+            <div class="slide-tag">PHÂN TÍCH CHUỖI THỜI GIAN 10 NĂM</div>
+            <h2 class="slide-title">Biến Động Không Gian & Sai Số (2017 – 2026)</h2>
+          </div>
+        </div>
+        <div class="slide-body">
+          <div class="grid-3" style="gap: 16px;">
+            <div class="card card-accent-cyan" style="padding: 12px;">
+              <div class="card-title" style="font-size: 0.95rem;">Diện Tích Mặt Nước (km²)</div>
+              <img src="figures/fig_multiyear_water_area_trend.png" style="width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-subtle);" alt="Water Area Trend">
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Đỉnh lũ cực đoan: năm 2017 (84.91 km²) & Siêu bão Yagi 2024 (79.07 km²).</p>
+            </div>
+
+            <div class="card card-accent-blue" style="padding: 12px;">
+              <div class="card-title" style="font-size: 0.95rem;">Xu Hướng Sai Số Vị Trí</div>
+              <img src="figures/fig_multiyear_positional_accuracy_trend.png" style="width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-subtle);" alt="Accuracy Trend">
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Median Error luôn đạt xuất sắc từ 7.4m - 11.8m (&lt; 1.2 pixels).</p>
+            </div>
+
+            <div class="card card-accent-purple" style="padding: 12px;">
+              <div class="card-title" style="font-size: 0.95rem;">Chiều Dài Đường Bờ & Cù Lao</div>
+              <img src="figures/fig_multiyear_shoreline_length_and_islands.png" style="width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-subtle);" alt="Islands Trend">
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Số lượng cù lao bãi nổi biến đổi từ 1 - 5 cù lao theo mực nước mùa.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 11B: Objective Assessment of Strengths & Weaknesses -->
+      <div class="slide">
+        <div class="slide-header">
+          <div>
+            <div class="slide-tag">ĐÁNH GIÁ KHÁCH QUAN DỰ ÁN</div>
+            <h2 class="slide-title">Phân Tích Điểm Mạnh, Điểm Yếu &amp; Giải Pháp Đột Phá Hạ Tầng</h2>
+            <p class="slide-subtitle">Nhìn nhận khách quan ưu thế, hạn chế và giải pháp kiến trúc Hybrid (GEE + Local Python 20-Core)</p>
+          </div>
+        </div>
+        <div class="slide-body">
+          <div class="grid-2" style="gap: 14px; margin-bottom: 14px;">
+            <div class="card card-accent-emerald" style="padding: 14px;">
+              <div class="card-title" style="color: var(--accent-emerald); font-size: 1rem;">ĐIỂM MẠNH (STRENGTHS)</div>
+              <div class="card-body" style="font-size: 0.84rem;">
+                <ul>
+                  <li><strong>Liên tục 100% không bị mây che:</strong> Quan trắc bất kể ngày đêm, phủ trọn 20 mùa (2017–2026) với 317 cảnh ảnh Sentinel-1.</li>
+                  <li><strong>Học máy Local RF + 17 GLCM Textures:</strong> Triệt tiêu hiệu quả nhiễu tán xạ phản xạ kép đô thị.</li>
+                  <li><strong>Centerline Bridge Connector:</strong> Hàn gắn 100% đứt gãy bóng gầm 6 cầu lớn nội đô Hà Nội.</li>
+                  <li><strong>Kiến trúc Hybrid 20 CPU Cores:</strong> Khắc phục triệt để giới hạn bộ nhớ GEE, xử lý toàn bộ 10 năm chỉ trong 15-20 phút.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-accent-red" style="padding: 14px;">
+              <div class="card-title" style="color: var(--accent-red); font-size: 1rem;">ĐIỂM YẾU &amp; HẠN CHẾ (WEAKNESSES)</div>
+              <div class="card-body" style="font-size: 0.84rem;">
+                <ul>
+                  <li><strong>Giới hạn độ phân giải không gian (10m):</strong> C-band SAR không phát hiện được biến động sạt lở tiểu vi dưới 5 m.</li>
+                  <li><strong>Double-bounce &amp; Gập ảnh đô thị (Reach 2):</strong> Kè bê tông đứng và nhà cao tầng gây vệt sáng radar lệch nhẹ 10 m – 30 m về lòng sông.</li>
+                  <li><strong>Lệch mốc thời gian chụp S1/S2 (1-3 ngày):</strong> Tạo ra sai số ngoại lệ lớn tại bãi bồi động Reach 1, kéo chỉ số RMSE dâng cao.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- BEFORE VS AFTER COMPARISON CARD -->
+          <div class="card" style="border-top: 4px solid var(--accent-blue); background: #f0f9ff; padding: 14px;">
+            <div class="card-title" style="color: var(--accent-blue); font-size: 0.98rem; margin-bottom: 8px;"> SO SÁNH BEFORE VS AFTER: ĐỘT PHÁ HẠ TẦNG XỬ LÝ DỮ LIỆU</div>
+            <div class="grid-2" style="gap: 12px; font-size: 0.83rem;">
+              <div style="background: #ffffff; padding: 10px; border-radius: 8px; border: 1.5px solid #fca5a5;">
+                <strong style="color: var(--accent-red); font-size: 0.88rem;"> BEFORE: Thuần Google Earth Engine (Cloud Only)</strong>
+                <ul style="margin-top: 6px; padding-left: 14px; color: #7f1d1d;">
+                  <li>Liên tục gặp lỗi <code>User Memory Limit Exceeded</code> khi xuất vector đường bờ mịn 10m.</li>
+                  <li>Bị vướng <code>Computation Timed Out</code> (&gt;5 phút) khi tính toán KD-Tree 50,000+ điểm trên 317 cảnh ảnh.</li>
+                  <li>Không thể xử lý quy mô lớn tự động cho trọn bộ chuỗi thời gian 10 năm.</li>
+                </ul>
+              </div>
+              <div style="background: #ffffff; padding: 10px; border-radius: 8px; border: 1.5px solid #6ee7b7;">
+                <strong style="color: var(--accent-emerald); font-size: 0.88rem;"> AFTER: Kiến Trúc Hybrid (GEE + Local Python 20-Core Multiprocessing)</strong>
+                <ul style="margin-top: 6px; padding-left: 14px; color: #064e3b;">
+                  <li>Tiền xử lý &amp; trích xuất 17 đặc trưng trên GEE, tải composite mảng phẳng về máy trạm.</li>
+                  <li>Phát triển pipeline Python <code>multiprocessing</code> tận dụng <strong>song song 20 nhân CPU</strong> để tính KD-Tree &amp; vector hóa.</li>
+                  <li>Thời gian chạy 10 năm giảm từ vài tiếng xuống <strong>15–20 phút</strong>, độ ổn định 100% không bao giờ tràn RAM.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 11C: Urban Feasibility Analysis (Reach 2) -->
+      <div class="slide">
+        <div class="slide-header">
+          <div>
+            <div class="slide-tag">TÍNH KHẢ THI NỘI ĐÔ</div>
+            <h2 class="slide-title">Khả Thi Khi Áp Dụng Cho Khu Dân Cư (Reach 2)</h2>
+            <p class="slide-subtitle">Đánh giá thực nghiệm trích xuất đường bờ sông Hồng đoạn chảy qua nội đô Hà Nội</p>
+          </div>
+        </div>
+        <div class="slide-body">
+          <div class="grid-2" style="gap: 16px;">
+            <div class="card card-accent-cyan" style="padding: 16px;">
+              <div class="card-title" style="color: var(--accent-blue);">Giải Pháp Kỹ Thuật Đột Phá</div>
+              <div class="card-body" style="font-size: 0.88rem;">
+                <ul>
+                  <li><strong>Phân biệt Bê tông vs Mặt nước:</strong> Chỉ số GLCM Entropy &amp; Contrast trong Random Forest tách biệt sự thô ráp ngẫu nhiên của khối nhà với độ phẳng mặt nước, ranh giới kè Chèm, kè Nhật Tân bám sát chuẩn 0 m – 5 m.</li>
+                  <li><strong>Centerline Connector:</strong> Hàn gắn hoàn toàn polygon sông bị đứt dưới gầm 6 cầu lớn (Nhật Tân, Long Biên, Vĩnh Tuy...).</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-accent-amber" style="padding: 16px;">
+              <div class="card-title" style="color: var(--accent-amber);">Kết Luận Khả Thi &amp; Khuyến Nghị</div>
+              <div class="card-body" style="font-size: 0.88rem;">
+                <ul>
+                  <li><strong>Hoàn toàn khả thi:</strong> Đáp ứng hoàn hảo bài toán giám sát hành lang sông, quy hoạch đô thị ven sông và theo dõi bãi nổi bồi lắng.</li>
+                  <li><strong>Khuyến nghị mở rộng:</strong> Cho bài toán đê điều vi mô (&lt; 5m), cần bổ sung ảnh quang học siêu cao độ phân giải (PlanetScope 3m) hoặc UAV/LiDAR.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- SLIDE 12: Conclusion & Q&A -->
+
+      <div class="slide">
+        <div class="cover-content">
+          <div class="cover-badge" style="background: #e0f2fe; color: var(--accent-blue); border-color: var(--accent-blue);">NỆM THU KẾT QUẢ THỰC TẬP</div>
+          <h1 class="cover-title" style="font-size: 3rem; margin-bottom: 16px;">XIN CHÂN THÀNH CẢM ƠN!</h1>
+          <p class="slide-subtitle" style="font-size: 1.25rem; color: var(--text-main); font-weight: 700; max-width: 750px; margin: 0 auto 32px auto;">
+            Quy trình viễn thám Sentinel-1 SAR đã nghiệm thu thành công, đạt độ chính xác cao và sẵn sàng đưa vào vận hành tự động toàn diện.
+          </p>
+          
+          <div class="grid-3" style="max-width: 850px; margin: 0 auto; text-align: left;">
+            <div class="card" style="padding: 18px;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700;">HỌ VÀ TÊN</div>
+              <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-top: 4px;">Vũ Đức Tùng</div>
+            </div>
+            <div class="card" style="padding: 18px;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700;">ĐƠN VỊ THỰC TẬP</div>
+              <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-top: 4px;">Trung tâm Vũ trụ VN</div>
+            </div>
+            <div class="card" style="padding: 18px;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700;">THỜI GIAN</div>
+              <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-top: 4px;">Tháng 07/2026</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer Navigation -->
+  <footer>
+    <div class="dots-nav" id="dotsContainer"></div>
+    <div class="slide-counter" id="slideCounter">Slide 1 / 14</div>
+
+    <div class="nav-buttons">
+      <button class="btn" onclick="prevSlide()">Trang Trước</button>
+      <button class="btn btn-primary" onclick="nextSlide()">Trang Sau</button>
+    </div>
+  </footer>
+
+  <script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    const slidesContainer = document.getElementById('slidesContainer');
+    const dotsContainer = document.getElementById('dotsContainer');
+    const slideCounter = document.getElementById('slideCounter');
+    const progressBar = document.getElementById('progressBar');
+
+    // Create Navigation Dots
+    slides.forEach((_, index) => {
+      const dot = document.createElement('div');
+      dot.classList.add('dot');
+      if (index === 0) dot.classList.add('active');
+      dot.addEventListener('click', () => goToSlide(index));
+      dotsContainer.appendChild(dot);
+    });
+
+    const dots = document.querySelectorAll('.dot');
+
+    function updateSlidePosition() {
+      slidesContainer.style.transform = `translateX(-${currentSlide * 100}vw)`;
+      
+      slides.forEach((slide, index) => {
+        if (index === currentSlide) {
+          slide.classList.add('active');
+        } else {
+          slide.classList.remove('active');
+        }
+      });
+
+      dots.forEach((dot, index) => {
+        if (index === currentSlide) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+
+      slideCounter.textContent = `Slide ${currentSlide + 1} / ${totalSlides}`;
+      const progressPercent = ((currentSlide + 1) / totalSlides) * 100;
+      progressBar.style.width = `${progressPercent}%`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides - 1) {
+        currentSlide++;
+        updateSlidePosition();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        currentSlide--;
+        updateSlidePosition();
+      }
+    }
+
+    function goToSlide(index) {
+      currentSlide = index;
+      updateSlidePosition();
+    }
+
+    // Listen for fullscreen state changes
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+
+    function handleFullscreenChange() {
+      if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement) {
+        document.body.classList.add('fullscreen-mode');
+      } else {
+        document.body.classList.remove('fullscreen-mode');
+      }
+    }
+
+    // Keyboard Controls
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        goToSlide(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        goToSlide(totalSlides - 1);
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+    });
+
+    // Fullscreen Toggle
+    function toggleFullscreen() {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(err => {
+            alert(`Không thể mở toàn màn hình: ${err.message}`);
+          });
+        } else if (document.documentElement.webkitRequestFullscreen) {
+          document.documentElement.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    }
+
+    // PDF Export Print Trigger
+    function exportPDF() {
+      window.print();
+    }
+
+    // Touch Swipe Gesture Support
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    document.addEventListener('touchstart', e => {
+      touchStartX = e.changedTouches[0].screenX;
+    });
+
+    document.addEventListener('touchend', e => {
+      touchEndX = e.changedTouches[0].screenX;
+      handleSwipe();
+    });
+
+    function handleSwipe() {
+      if (touchEndX < touchStartX - 50) {
+        nextSlide();
+      }
+      if (touchEndX > touchStartX + 50) {
+        prevSlide();
+      }
+    }
+  </script>
+</body>
+</html>
