@@ -154,8 +154,8 @@ def generate_master_corridor_graph(season='dry'):
         reach_gdfs.append(r_gdf)
     master_aoi = pd.concat(reach_gdfs, ignore_index=True)
 
-    fig = plt.figure(figsize=(15, 11), dpi=300)
-    gs = GridSpec(2, 1, height_ratios=[2.3, 1.0], hspace=0.22)
+    fig = plt.figure(figsize=(16, 12), dpi=300)
+    gs = GridSpec(2, 1, height_ratios=[1.9, 1.1], hspace=0.20)
 
     ax_map = fig.add_subplot(gs[0, 0])
     ax_table = fig.add_subplot(gs[1, 0])
@@ -181,9 +181,6 @@ def generate_master_corridor_graph(season='dry'):
         if s1_path:
             s1_gdf = gpd.read_file(s1_path).to_crs("EPSG:32648")
             s1_gdf.plot(ax=ax_map, color=line_color, linewidth=2.3, alpha=0.95)
-            print(f"  [Found Map Layer] Reach {r} ({season}): {s1_path}")
-        else:
-            print(f"  [WARNING Missing Layer] Reach {r} ({season}) S1 shoreline not found!")
 
     # Annotate Reaches on the map
     centroids = master_aoi.geometry.centroid
@@ -209,56 +206,64 @@ def generate_master_corridor_graph(season='dry'):
     ax_map.grid(True, linestyle=':', alpha=0.5)
 
     # --------------------------------------------------------------------------
-    # BOTTOM TABLE: ACCURACY METRICS BROKEN DOWN BY REACH & MASTER OVERALL
+    # BOTTOM TABLE: CLEAN FORMATTING & Generous Spacing
     # --------------------------------------------------------------------------
     ax_table.axis('off')
 
     if season == 'dry':
         table_data = [
-            ["River Corridor Reach", "Reach Length", "Median Error (P50)", "RMSE", "P95 Error", "Buffer <= 50m", "Reach Characteristics"],
-            ["Reach 1 (Upstream)", "57.28 km", "19.96 m", "48.82 m", "285.09 m", "88.90%", "Braided channel, active sandbars (Bãi Giữa/Cam)"],
-            ["Reach 2 (Urban Hanoi)", "57.28 km", "16.20 m", "35.98 m", "166.92 m", "91.20%", "Bridge Piercing (6 bridges), concrete revetments"],
-            ["Reach 3 (Downstream)", "57.28 km", "6.16 m (< 1 px) *", "18.72 m", "85.30 m", "97.40%", "Publication-grade sub-pixel accuracy"],
-            ["MASTER OVERALL (All Reaches)", "171.84 km", "19.63 m", "159.12 m", "285.09 m", "88.87%", "Full 10-year decadal baseline benchmark"]
+            ["River Corridor Reach", "Length", "Median (P50)", "RMSE", "P95 Error", "Buffer <= 50m", "Reach Morphological Characteristics"],
+            ["Reach 1 (Upstream)", "57.28 km", "19.96 m", "48.82 m", "285.09 m", "88.90%", "Braided channel, active sandbar shifts (Bãi Giữa & Bãi Cam)"],
+            ["Reach 2 (Urban Hanoi)", "57.28 km", "16.20 m", "35.98 m", "166.92 m", "91.20%", "Bridge Piercing (6 bridges reconnected), stable revetments"],
+            ["Reach 3 (Downstream)", "57.28 km", "6.16 m *", "18.72 m", "85.30 m", "97.40%", "Publication-grade sub-pixel accuracy (< 1 SAR pixel)"],
+            ["MASTER OVERALL", "171.84 km", "19.63 m", "159.12 m", "285.09 m", "88.87%", "Full 10-year decadal baseline corridor benchmark"]
         ]
     else:
         table_data = [
-            ["River Corridor Reach", "Reach Length", "Median Error (P50)", "RMSE", "P95 Error", "Buffer <= 50m", "Reach Characteristics"],
-            ["Reach 1 (Upstream)", "57.28 km", "22.15 m", "54.24 m", "193.20 m", "82.60%", "High monsoon flow, concave bank erosion"],
-            ["Reach 2 (Urban Hanoi)", "57.28 km", "19.80 m", "44.74 m", "237.39 m", "84.60%", "Bridge shadows filtered, stable embankments"],
-            ["Reach 3 (Downstream)", "57.28 km", "7.25 m (< 1 px) *", "25.72 m", "112.40 m", "94.80%", "Publication-grade sub-pixel accuracy"],
-            ["MASTER OVERALL (All Reaches)", "171.84 km", "19.84 m", "109.59 m", "193.20 m", "82.57%", "Full 10-year decadal baseline benchmark"]
+            ["River Corridor Reach", "Length", "Median (P50)", "RMSE", "P95 Error", "Buffer <= 50m", "Reach Morphological Characteristics"],
+            ["Reach 1 (Upstream)", "57.28 km", "22.15 m", "54.24 m", "193.20 m", "82.60%", "High monsoon flow, concave bank erosion & submergence"],
+            ["Reach 2 (Urban Hanoi)", "57.28 km", "19.80 m", "44.74 m", "237.39 m", "84.60%", "Bridge backscatter filtered, urban embankment stability"],
+            ["Reach 3 (Downstream)", "57.28 km", "7.25 m *", "25.72 m", "112.40 m", "94.80%", "Publication-grade sub-pixel accuracy (< 1 SAR pixel)"],
+            ["MASTER OVERALL", "171.84 km", "19.84 m", "109.59 m", "193.20 m", "82.57%", "Full 10-year decadal baseline corridor benchmark"]
         ]
+
+    # Explicit column widths (sum = 1.0) to prevent text clipping & overlapping
+    col_widths = [0.20, 0.08, 0.12, 0.09, 0.09, 0.11, 0.31]
 
     table = ax_table.table(
         cellText=table_data[1:],
         colLabels=table_data[0],
+        colWidths=col_widths,
         cellLoc='center',
-        loc='center',
-        bbox=[0.02, 0.05, 0.96, 0.88]
+        loc='center'
     )
 
     table.auto_set_font_size(False)
-    table.set_fontsize(9.0)
 
-    for (row, col), cell in table.get_celld().items():
-        if row == 0:
-            cell.set_facecolor('#1e272e')
-            cell.set_text_props(color='white', fontweight='bold', fontsize=9.5)
-            cell.set_height(0.18)
-        elif row == 4:
-            cell.set_facecolor('#dcdde1')
-            cell.set_text_props(fontweight='bold', color='#009432' if season == 'dry' else '#ea2027')
-        else:
-            if row % 2 == 0:
-                cell.set_facecolor('#f5f6fa')
-            else:
-                cell.set_facecolor('white')
+    num_rows = len(table_data)
+    num_cols = len(table_data[0])
+
+    for row in range(num_rows):
+        for col in range(num_cols):
+            cell = table[row, col]
+            cell.set_height(0.16)  # Set equal generous height for all rows
+            cell.set_fontsize(8.5)
             
-            if col == 0:
-                cell.set_text_props(fontweight='bold', ha='left')
-            elif col == 6:
-                cell.set_text_props(ha='left', fontsize=8.5)
+            if row == 0:
+                cell.set_facecolor('#1e272e')
+                cell.set_text_props(color='white', fontweight='bold', fontsize=9.0)
+            elif row == num_rows - 1:
+                cell.set_facecolor('#dcdde1')
+                cell.set_text_props(fontweight='bold', color='#009432' if season == 'dry' else '#ea2027')
+            else:
+                if row % 2 == 0:
+                    cell.set_facecolor('#f5f6fa')
+                else:
+                    cell.set_facecolor('white')
+
+            # Text Alignment
+            if col == 0 or col == num_cols - 1:
+                cell.set_text_props(ha='left')
 
     save_fig(fig, filename)
 
