@@ -37,6 +37,20 @@ def save_fig(fig, filename):
     plt.close(fig)
     print(f"  [Saved] {filename} -> {path1}")
 
+def find_vector_file(reach_num, year, season, file_type='s1'):
+    prefix = f"reach{reach_num}_s1_shoreline_{year}_{season}.geojson" if file_type == 's1' else f"reach{reach_num}_s2_ref_{year}_{season}.geojson"
+    
+    candidates = [
+        os.path.join(PROJECT_ROOT, "outputs", "others", prefix),
+        os.path.join(PROJECT_ROOT, "outputs", str(year), f"{year}_{season}", prefix),
+        os.path.join(PROJECT_ROOT, "outputs", str(year), f"{year}_{season}", "vectors", prefix),
+    ]
+    
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return None
+
 # ==============================================================================
 # 1. Multiyear Trend Graphs (Pure English)
 # ==============================================================================
@@ -131,8 +145,6 @@ def generate_master_corridor_graph(season='dry'):
     line_color = "#00a8ff" if season == 'dry' else "#e84118"
     filename = f"master_corridor_2024_{season}_en.png"
 
-    vector_dir = os.path.join(PROJECT_ROOT, "outputs", "others")
-
     # Combine AOIs
     reach_gdfs = []
     for r in [1, 2, 3]:
@@ -149,8 +161,8 @@ def generate_master_corridor_graph(season='dry'):
     ax_table = fig.add_subplot(gs[1, 0])
 
     # Plot AOI corridors with distinct Reach shading
-    colors_reach = {1: '#dff9fb', 2: '#f1f2f6', 3: '#eccc68'}
-    borders_reach = {1: '#22a6b3', 2: '#747d8c', 3: '#ffa502'}
+    colors_reach = {1: '#dff9fb', 2: '#f1f2f6', 3: '#fce4ec'}
+    borders_reach = {1: '#22a6b3', 2: '#747d8c', 3: '#e91e63'}
     
     for r in [1, 2, 3]:
         r_sub = master_aoi[master_aoi['reach_num'] == r]
@@ -159,16 +171,19 @@ def generate_master_corridor_graph(season='dry'):
 
     # Plot S2 Reference and S1 Shoreline for Reach 1, 2, 3
     for r in [1, 2, 3]:
-        s1_path = os.path.join(vector_dir, f"reach{r}_s1_shoreline_2024_{season}.geojson")
-        s2_path = os.path.join(vector_dir, f"reach{r}_s2_ref_2024_{season}.geojson")
+        s1_path = find_vector_file(r, 2024, season, 's1')
+        s2_path = find_vector_file(r, 2024, season, 's2')
 
-        if os.path.exists(s2_path):
+        if s2_path:
             s2_gdf = gpd.read_file(s2_path).to_crs("EPSG:32648")
             s2_gdf.plot(ax=ax_map, color='#e74c3c', linewidth=1.4, linestyle=':', alpha=0.85)
 
-        if os.path.exists(s1_path):
+        if s1_path:
             s1_gdf = gpd.read_file(s1_path).to_crs("EPSG:32648")
             s1_gdf.plot(ax=ax_map, color=line_color, linewidth=2.3, alpha=0.95)
+            print(f"  [Found Map Layer] Reach {r} ({season}): {s1_path}")
+        else:
+            print(f"  [WARNING Missing Layer] Reach {r} ({season}) S1 shoreline not found!")
 
     # Annotate Reaches on the map
     centroids = master_aoi.geometry.centroid
@@ -177,7 +192,7 @@ def generate_master_corridor_graph(season='dry'):
     ax_map.text(centroids.iloc[1].x, centroids.iloc[1].y - 3000, "REACH 2\n(Urban Hanoi)",
                 fontsize=10, fontweight='bold', color='#2f3542', bbox=dict(boxstyle='round,pad=0.3', fc='white', ec='#2f3542', alpha=0.85))
     ax_map.text(centroids.iloc[2].x + 3000, centroids.iloc[2].y, "REACH 3\n(Downstream)",
-                fontsize=10, fontweight='bold', color='#e67e22', bbox=dict(boxstyle='round,pad=0.3', fc='white', ec='#e67e22', alpha=0.85))
+                fontsize=10, fontweight='bold', color='#c2185b', bbox=dict(boxstyle='round,pad=0.3', fc='white', ec='#c2185b', alpha=0.85))
 
     legend_elements = [
         Line2D([0], [0], color=line_color, lw=2.4, label=f'Sentinel-1 SAR Shoreline ({season_name})'),
